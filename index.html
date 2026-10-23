@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#06111c"><meta name="description" content="JARVIS Mobile — персональный голосовой AI-ассистент">
+<link rel="manifest" href="manifest.json"><link rel="icon" href="icon-192.png"><link rel="stylesheet" href="style.css">
+<title>J.A.R.V.I.S. Mobile</title>
+</head>
+<body>
+<div class="app">
+<header><div class="brand"><span class="brand-mark">J</span><div><b>J.A.R.V.I.S.</b><small>MOBILE INTELLIGENCE</small></div></div><button id="settingsBtn" class="icon-btn" aria-label="Настройки">⚙</button></header>
+<div class="status"><span class="pulse"></span><span id="statusText">СИСТЕМА ГОТОВА</span><span id="clock">--:--</span></div>
+<main>
+<section class="core-panel">
+<div class="orbit orbit-a"></div><div class="orbit orbit-b"></div><div class="core" id="core"><div class="core-inner"><span class="core-eye">J</span></div></div>
+<div class="core-caption" id="coreCaption">ГОТОВ К КОМАНДЕ</div>
+<div class="wave" id="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+</section>
+<section class="greeting"><div class="eyebrow">ПЕРСОНАЛЬНЫЙ АССИСТЕНТ</div><h1 id="greetingTitle">Добрый вечер.</h1><p id="reply">Я на связи. Чем могу помочь?</p></section>
+<section class="quick-grid">
+<button class="quick" data-command="Который час"><span>◷</span><b>Время</b><small>Текущее время</small></button>
+<button class="quick" data-command="Открой YouTube"><span>▷</span><b>YouTube</b><small>Открыть видео</small></button>
+<button class="quick" data-command="Создай заметку"><span>▤</span><b>Заметка</b><small>Записать мысль</small></button>
+<button class="quick" data-command="Погода"><span>☁</span><b>Погода</b><small>Где я сейчас</small></button>
+<button class="quick" data-command="Заряд батареи"><span>⚡</span><b>Батарея</b><small>Заряд телефона</small></button>
+<button class="quick" data-command="Помощь"><span>⌘</span><b>Команды</b><small>Что я умею</small></button>
+</section>
+<section class="console"><div class="section-head"><span>ЖУРНАЛ СЕАНСА</span><button id="clearLog">ОЧИСТИТЬ</button></div><div id="log" class="log"><div class="log-line system"><time>SYS</time><span>Инициализация интерфейса завершена.</span></div><div class="log-line system"><time>SYS</time><span>Локальная память активна.</span></div></div></section>
+</main>
+<footer><button id="micBtn" class="mic-btn"><span class="mic-icon">🎙</span><span><b id="micLabel">НАЖМИ И ГОВОРИ</b><small>Голосовой ввод</small></span><span class="mic-arrow">↗</span></button><button id="wakeBtn" class="wake-btn">СЛУШАТЬ «ДЖАРВИС»: ВЫКЛ</button><div class="input-row"><input id="textCommand" placeholder="Или напиши команду..." autocomplete="off"><button id="sendBtn" aria-label="Отправить">➤</button></div><div class="footer-note">JARVIS MOBILE <span>•</span> PRIVATE LOCAL MEMORY</div></footer>
+</div>
+<dialog id="settingsDialog"><form method="dialog" class="settings"><div class="section-head"><h2>Настройки системы</h2><button class="close" value="cancel">✕</button></div><label>Как к тебе обращаться<input id="ownerName" placeholder="Имя или позывной" maxlength="40"></label><label>Характер ассистента<select id="personality"><option value="formal">Спокойный и профессиональный</option><option value="friendly">Дружелюбный и остроумный</option><option value="tactical">Краткий тактический стиль</option></select></label><label class="check"><input id="voiceReplies" type="checkbox" checked> Озвучивать ответы</label><label class="check"><input id="saveHistory" type="checkbox" checked> Сохранять журнал на этом устройстве</label><label>Адрес ИИ API (OpenAI-совместимый)<input id="aiBase" autocomplete="off"></label><label>Модель ИИ<input id="aiModel" autocomplete="off"></label><label>API-ключ (хранится только на телефоне)<input id="aiKey" type="password" autocomplete="off"></label><label>Город по умолчанию для погоды<input id="city" placeholder="Например: Вена"></label><p class="hint">Память хранится локально в браузере этого устройства. Не вводи пароли и секретные данные.</p><button id="saveSettings" class="primary" value="save">Сохранить настройки</button></form></dialog>
+<dialog id="noteDialog"><form method="dialog" class="settings"><div class="section-head"><h2>Новая заметка</h2><button class="close" value="cancel">✕</button></div><textarea id="noteText" rows="4" placeholder="Что нужно запомнить?"></textarea><button id="saveNote" class="primary" value="save">Сохранить заметку</button></form></dialog>
+<script src="app.js"></script>
+</body></html>
