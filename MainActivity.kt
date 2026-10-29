@@ -1,6 +1,15 @@
 package com.mark.jarvis
 
 import android.Manifest
+import android.app.AlertDialog
+import android.media.AudioManager
+import android.os.BatteryManager
+import android.provider.AlarmClock
+import android.provider.CalendarContract
+import android.provider.ContactsContract
+import android.view.KeyEvent
+import android.webkit.GeolocationPermissions
+import android.webkit.WebChromeClient
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -31,6 +40,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.exifinterface.media.ExifInterface
 import androidx.webkit.WebViewAssetLoader
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -52,6 +62,46 @@ class MainActivity : ComponentActivity() {
     }
     private val shoot = registerForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
         if (ok) photoUri?.let { sendPhoto(it) }
+    }
+
+    private var afterPerm: (() -> Unit)? = null
+    private val multiPerm = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { res ->
+        val a = afterPerm; afterPerm = null
+        if (res.values.all { it }) a?.invoke()
+        else js("window.onNativeError('Не хватает разрешения. Включите его в настройках Android для JARVIS.')")
+    }
+    private val allPerm = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { res ->
+        js("window.onNativeInfo('Выдано разрешений: " + res.values.count { it } + " из " + res.size + ".')")
+    }
+
+    private fun withPerms(perms: Array<String>, action: () -> Unit) {
+        val missing = perms.filter { !has(it) }
+        if (missing.isEmpty()) action() else { afterPerm = action; multiPerm.launch(missing.toTypedArray()) }
+    }
+
+    private fun err(msg: String) = js("window.onNativeError(" + JSONObject.quote(msg) + ")")
+
+    private fun findContact(name: String): Pair<String, String>? {
+        val all = ArrayList<Pair<String, String>>()
+        val ph = ContactsContract.CommonDataKinds.Phone
+        contentResolver.query(ph.CONTENT_URI, arrayOf(ph.DISPLAY_NAME, ph.NUMBER), null, null, null)?.use {
+            while (it.moveToNext()) all.add(Pair(it.getString(0) ?: "", it.getString(1) ?: ""))
+        }
+        val q = name.trim().lowercase(Locale.getDefault())
+        val lo = minOf(q.length, maxOf(3, q.length - 3))
+        var n = q.length
+        while (n >= lo && n > 0) {
+            val part = q.substring(0, n)
+            all.firstOrNull { it.first.lowercase(Locale.getDefault()).contains(part) }?.let { return it }
+            n--
+        }
+        return null
+    }
+
+    private fun confirm(msg: String, yes: () -> Unit) {
+        AlertDialog.Builder(this).setMessage(msg)
+            .setPositiveButton("Да") { _, _ -> yes() }
+            .setNegativeButton("Отмена", null).show()
     }
 
     private fun js(code: String) = runOnUiThread { web.evaluateJavascript(code, null) }
@@ -76,8 +126,32 @@ class MainActivity : ComponentActivity() {
                 return true
             }
         }
+        web.webChromeClient = object : WebChromeClient() {
+            override fun onGeolocationPermissionsShowPrompt(origin: String, callback: GeolocationPermissions.Callback) {
+                withPerms(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)) { callback.invoke(origin, true, false) }
+            }
+            override fun onPermissionRequest(request: android.webkit.PermissionRequest) {
+                runOnUiThread { withPerms(arrayOf(Manifest.permission.RECORD_AUDIO)) { request.grant(request.resources) } }
+            }
+        }
         web.addJavascriptInterface(Bridge(), "Android")
-        tts = TextToSpeech(this) { st ->
+        initTts(null)
+        if (!has(Manifest.permission.RECORD_AUDIO)) micPerm.launch(Manifest.permission.RECORD_AUDIO)
+        web.loadUrl("https://appassets.androidplatform.net/assets/www/index.html")
+    }
+
+    private var ttsEngine: String? = null
+    private var voiceName: String = ""
+
+    private fun applyVoice() {
+        if (voiceName.isEmpty()) return
+        try { tts?.voices?.firstOrNull { it.name == voiceName }?.let { tts?.voice = it } } catch (e: Exception) { }
+    }
+
+    private fun initTts(engine: String?) {
+        ttsReady = false
+        try { tts?.shutdown() } catch (e: Exception) { }
+        val listener = TextToSpeech.OnInitListener { st ->
             if (st == TextToSpeech.SUCCESS) {
                 tts?.language = Locale("ru", "RU")
                 tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
@@ -86,11 +160,14 @@ class MainActivity : ComponentActivity() {
                     @Deprecated("Deprecated in Java")
                     override fun onError(id: String?) { js("window.onNativeSpeakDone&&window.onNativeSpeakDone()") }
                 })
+                applyVoice()
                 ttsReady = true
+                js("window.onNativeTtsReady&&window.onNativeTtsReady()")
+            } else {
+                js("window.onNativeError('Синтезатор речи не запустился. Проверьте Настройки Android, Синтез речи.')")
             }
         }
-        if (!has(Manifest.permission.RECORD_AUDIO)) micPerm.launch(Manifest.permission.RECORD_AUDIO)
-        web.loadUrl("https://appassets.androidplatform.net/assets/www/index.html")
+        tts = if (engine.isNullOrEmpty()) TextToSpeech(this, listener) else TextToSpeech(this, listener, engine)
     }
 
     private fun openExternal(url: String, pkg: String) {
@@ -192,18 +269,61 @@ class MainActivity : ComponentActivity() {
         @JavascriptInterface fun hasSpeech(): Boolean = SpeechRecognizer.isRecognitionAvailable(this@MainActivity)
         @JavascriptInterface fun listen() { runOnUiThread { startListen() } }
         @JavascriptInterface fun stopListen() { runOnUiThread { recognizer?.cancel() } }
-        @JavascriptInterface fun speak(text: String, rate: Float) {
+        @JavascriptInterface fun speak(text: String, rate: Float, pitch: Float, lang: String) {
             runOnUiThread {
                 if (!ttsReady) { js("window.onNativeSpeakDone&&window.onNativeSpeakDone()"); return@runOnUiThread }
+                val l = lang.ifEmpty { "ru-RU" }
+                val r = tts?.setLanguage(Locale.forLanguageTag(l))
+                if (r == TextToSpeech.LANG_MISSING_DATA || r == TextToSpeech.LANG_NOT_SUPPORTED) tts?.language = Locale("ru", "RU")
+                if (l.startsWith("ru")) applyVoice()
                 tts?.setSpeechRate(rate)
-                tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "jarvis")
+                tts?.setPitch(pitch)
+                val res = tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "jarvis")
+                if (res != TextToSpeech.SUCCESS) js("window.onNativeSpeakDone&&window.onNativeSpeakDone()")
             }
+        }
+        @JavascriptInterface fun ttsInfo(): String {
+            val o = JSONObject()
+            val eng = JSONArray()
+            try { tts?.engines?.forEach { eng.put(JSONObject().put("n", it.name).put("l", it.label.toString())) } } catch (e: Exception) { }
+            val vs = JSONArray()
+            try {
+                tts?.voices?.filter { it.locale.language == "ru" }?.sortedBy { it.name }?.forEach {
+                    vs.put(JSONObject().put("n", it.name).put("l", it.name + " (" + it.locale.displayCountry + ")"))
+                }
+            } catch (e: Exception) { }
+            o.put("engines", eng)
+            o.put("engine", ttsEngine ?: tts?.defaultEngine ?: "")
+            o.put("voices", vs)
+            return o.toString()
+        }
+        @JavascriptInterface fun setEngine(name: String) { runOnUiThread { ttsEngine = name.ifEmpty { null }; initTts(ttsEngine) } }
+        @JavascriptInterface fun setVoice(name: String) { runOnUiThread { voiceName = name; applyVoice() } }
+        @JavascriptInterface fun ttsSettings() {
+            runOnUiThread {
+                try { startActivity(Intent("com.android.settings.TTS_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                catch (e: Exception) { try { startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (e2: Exception) { } }
+            }
+        }
+        @JavascriptInterface fun checkInfo(): String {
+            val o = JSONObject()
+            o.put("mic", has(Manifest.permission.RECORD_AUDIO))
+            o.put("recog", SpeechRecognizer.isRecognitionAvailable(this@MainActivity))
+            o.put("tts", ttsReady)
+            o.put("engine", ttsEngine ?: tts?.defaultEngine ?: "")
+            var ru = 0
+            try { ru = tts?.voices?.count { it.locale.language == "ru" } ?: 0 } catch (e: Exception) { }
+            o.put("ru", ru)
+            return o.toString()
         }
         @JavascriptInterface fun stopSpeak() { runOnUiThread { tts?.stop() } }
         @JavascriptInterface fun openUrl(url: String, pkg: String) { runOnUiThread { openExternal(url, pkg) } }
         @JavascriptInterface fun hasApp(name: String): Boolean = findApp(name) != null
         @JavascriptInterface fun openApp(name: String) {
             runOnUiThread { findApp(name)?.let { try { startActivity(it) } catch (e: Exception) { } } }
+        }
+        @JavascriptInterface fun goHome() {
+            runOnUiThread { try { startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (e: Exception) { } }
         }
         @JavascriptInterface fun torch(on: Boolean): Boolean {
             return try {
@@ -229,6 +349,87 @@ class MainActivity : ComponentActivity() {
                 if (on) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                 else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             }
+        }
+        @JavascriptInterface fun grantAll() {
+            runOnUiThread {
+                allPerm.launch(arrayOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA,
+                    Manifest.permission.READ_CONTACTS, Manifest.permission.CALL_PHONE, Manifest.permission.ACCESS_FINE_LOCATION))
+            }
+        }
+        @JavascriptInterface fun callContact(name: String) {
+            runOnUiThread {
+                withPerms(arrayOf(Manifest.permission.READ_CONTACTS)) {
+                    val c = findContact(name)
+                    if (c == null) err("Контакт «$name» не найден.")
+                    else confirm("Позвонить: ${c.first} (${c.second})?") {
+                        val uri = Uri.parse("tel:" + Uri.encode(c.second))
+                        val call = has(Manifest.permission.CALL_PHONE)
+                        try { startActivity(Intent(if (call) Intent.ACTION_CALL else Intent.ACTION_DIAL, uri)) } catch (e: Exception) { err("Не удалось позвонить.") }
+                    }
+                }
+            }
+        }
+        @JavascriptInterface fun sendSms(who: String, text: String) {
+            runOnUiThread {
+                fun open(num: String, label: String) = confirm("Открыть сообщение для $label?\n«$text»") {
+                    try { startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:" + Uri.encode(num))).putExtra("sms_body", text)) }
+                    catch (e: Exception) { err("Не удалось открыть сообщения.") }
+                }
+                if (who.count { it.isDigit() } >= 5) open(who.filter { it.isDigit() || it == '+' }, who)
+                else withPerms(arrayOf(Manifest.permission.READ_CONTACTS)) {
+                    val c = findContact(who)
+                    if (c == null) err("Контакт «$who» не найден.") else open(c.second, c.first)
+                }
+            }
+        }
+        @JavascriptInterface fun setTimer(sec: Int, label: String) {
+            runOnUiThread {
+                try {
+                    startActivity(Intent(AlarmClock.ACTION_SET_TIMER).putExtra(AlarmClock.EXTRA_LENGTH, sec)
+                        .putExtra(AlarmClock.EXTRA_MESSAGE, label).putExtra(AlarmClock.EXTRA_SKIP_UI, true))
+                } catch (e: Exception) { err("Не удалось поставить таймер.") }
+            }
+        }
+        @JavascriptInterface fun setAlarm(hour: Int, min: Int) {
+            runOnUiThread {
+                try {
+                    startActivity(Intent(AlarmClock.ACTION_SET_ALARM).putExtra(AlarmClock.EXTRA_HOUR, hour)
+                        .putExtra(AlarmClock.EXTRA_MINUTES, min).putExtra(AlarmClock.EXTRA_MESSAGE, "Вектор")
+                        .putExtra(AlarmClock.EXTRA_SKIP_UI, true))
+                } catch (e: Exception) { err("Не удалось поставить будильник.") }
+            }
+        }
+        @JavascriptInterface fun addEvent(title: String) {
+            runOnUiThread {
+                try {
+                    startActivity(Intent(Intent.ACTION_INSERT).setData(CalendarContract.Events.CONTENT_URI)
+                        .putExtra(CalendarContract.Events.TITLE, title))
+                } catch (e: Exception) { err("Календарь не найден.") }
+            }
+        }
+        @JavascriptInterface fun media(cmd: String) {
+            runOnUiThread {
+                val code = when (cmd) {
+                    "play" -> KeyEvent.KEYCODE_MEDIA_PLAY
+                    "pause" -> KeyEvent.KEYCODE_MEDIA_PAUSE
+                    "next" -> KeyEvent.KEYCODE_MEDIA_NEXT
+                    else -> KeyEvent.KEYCODE_MEDIA_PREVIOUS
+                }
+                val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                am.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, code))
+                am.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP, code))
+            }
+        }
+        @JavascriptInterface fun volume(dir: Int) {
+            runOnUiThread {
+                val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                am.adjustStreamVolume(AudioManager.STREAM_MUSIC,
+                    if (dir > 0) AudioManager.ADJUST_RAISE else AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI)
+            }
+        }
+        @JavascriptInterface fun battery(): String {
+            val bm = getSystemService(Context.BATTERY_SERVICE) as BatteryManager
+            return bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY).toString() + "|" + (if (bm.isCharging) "1" else "0")
         }
         @JavascriptInterface fun takePhoto() {
             runOnUiThread { if (has(Manifest.permission.CAMERA)) doShoot() else camPerm.launch(Manifest.permission.CAMERA) }

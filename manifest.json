@@ -1,13 +1,13 @@
 {
-  "name": "JARVIS Mobile",
-  "short_name": "JARVIS",
+  "name": "Вектор",
+  "short_name": "Вектор",
   "description": "Персональный голосовой ассистент для Android",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#050b12",
-  "theme_color": "#06111c",
+  "background_color": "#0c0913",
+  "theme_color": "#0c0913",
   "icons": [
     {
       "src": "icon-192.png",

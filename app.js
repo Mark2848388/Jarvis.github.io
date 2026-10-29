@@ -1,6 +1,9 @@
 const $=id=>document.getElementById(id);
 const NATIVE=!!window.Android;
-const defaults={ownerName:'',personality:'formal',voiceReplies:true,saveHistory:true,aiBase:'https://api.groq.com/openai/v1',aiModel:'openai/gpt-oss-120b',aiKey:'',city:'',visBase:'https://generativelanguage.googleapis.com/v1beta/openai',visModel:'gemini-2.5-flash',visKey:''};
+const ic=n=>'<svg class="ic"><use href="#i-'+n+'"/></svg>';
+const botN=()=>settings.botName||'Вектор';
+function wakeRe(){const n=botN().toLowerCase().replace(/[.*+?^${}()|[\]\\]/g,'\\$&');return new RegExp('('+n+'|вектор|храз|хразъ|храс|джарвис|жарвис|jarvis)[,\\s]*','i')}
+const defaults={botName:'Вектор',ownerName:'',personality:'formal',voiceReplies:true,saveHistory:true,aiBase:'https://api.groq.com/openai/v1',aiModel:'openai/gpt-oss-120b',aiKey:'',city:'',visBase:'https://generativelanguage.googleapis.com/v1beta/openai',visModel:'gemini-2.5-flash',visKey:''};
 let settings={...defaults,...read('jarvis_settings',{})};
 if(['llama-3.3-70b-versatile','llama-3.1-8b-instant'].includes(settings.aiModel)){settings.aiModel=defaults.aiModel;write('jarvis_settings',settings)}
 let notes=read('jarvis_notes',[]),history=read('jarvis_history',[]),chat=read('jarvis_chat',[]),reminders=read('jarvis_rem',[]);
@@ -9,11 +12,11 @@ function read(k,f){try{const x=localStorage.getItem(k);return x?JSON.parse(x):f}
 function write(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
 function now(){return new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}
 function toBottom(){const m=document.querySelector('main');m.scrollTop=m.scrollHeight}
-function row(who,msg,type){const r=document.createElement('div');r.className='msg '+(who==='user'?'user':who==='jarvis'?'jarvis':'sys '+(type||''));const b=document.createElement('div');b.className='bubble';b.textContent=msg;r.append(b);$('log').append(r);toBottom()}
+function row(who,msg,type){const r=document.createElement('div');r.className='msg '+(who==='user'?'user':who==='jarvis'?'jarvis':'sys '+(type||''));const b=document.createElement('div');b.className='bubble';if(who==='jarvis')b.append(md(msg));else b.textContent=msg;r.append(b);$('log').append(r);toBottom()}
 function log(who,msg,type='system'){row(who,msg,type);if(settings.saveHistory){history.push({who,msg,type});history=history.slice(-60);write('jarvis_history',history)}}
 function renderHistory(){if(settings.saveHistory)for(const x of history.slice(-12))row(x.who,x.msg,x.who==='user'?'user':x.type)}
 function state(cap,status){$('coreCaption').textContent=cap;$('statusText').textContent=status;$('core').classList.toggle('listening',listening);$('micBtn').classList.toggle('rec',listening)}
-function idle(){state(always?'ЖДУ СЛОВО «ДЖАРВИС»':'ГОТОВ К КОМАНДЕ',always?'РЕЖИМ ОЖИДАНИЯ':'СИСТЕМА ГОТОВА')}
+function idle(){state(always?'ЖДУ СЛОВО «'+botN().toUpperCase()+'»':'ГОТОВ К КОМАНДЕ',always?'РЕЖИМ ОЖИДАНИЯ':'СИСТЕМА ГОТОВА')}
 function speak(text,lang){
   if(settings.voiceKind==='piper'&&!piperFailed&&settings.voiceReplies&&(!lang||lang.startsWith('ru')))return piperSpeak(text,()=>speakSys(text,lang));
   return speakSys(text,lang)}
@@ -28,10 +31,10 @@ function say(text,lang,spoken){$('reply').textContent=text;log('jarvis',text);sp
 function updateClock(){$('clock').textContent=now();const h=new Date().getHours();$('greetingTitle').textContent=(h<5?'Доброй ночи':h<12?'Доброе утро':h<18?'Добрый день':'Добрый вечер')+(settings.ownerName?', '+settings.ownerName:'')+'.'}
 const APPS={'youtube':['https://www.youtube.com','com.google.android.youtube'],'ютуб':['https://www.youtube.com','com.google.android.youtube'],'телеграм':['https://t.me','org.telegram.messenger'],'telegram':['https://t.me','org.telegram.messenger'],'ватсап':['https://wa.me','com.whatsapp'],'whatsapp':['https://wa.me','com.whatsapp'],'карты':['https://maps.google.com','com.google.android.apps.maps'],'google':['https://www.google.com',''],'гугл':['https://www.google.com',''],'почту':['https://mail.google.com','com.google.android.gm'],'почта':['https://mail.google.com','com.google.android.gm'],'инстаграм':['https://www.instagram.com','com.instagram.android'],'вк':['https://vk.com','com.vkontakte.android'],'спотифай':['https://open.spotify.com','com.spotify.music'],'браузер':['https://www.google.com',''],'переводчик':['https://translate.google.com','com.google.android.apps.translate']};
 function go(url,pkg){setTimeout(()=>{if(NATIVE){Android.openUrl(url,pkg||'');return}if(pkg){const u=new URL(url);location.href=`intent://${u.host}${u.pathname}#Intent;scheme=https;package=${pkg};S.browser_fallback_url=${encodeURIComponent(url)};end`}else location.href=url},1200)}
-function help(){return 'Я умею: время и дата; погода («погода в Вене»); посчитай («посчитай 15 умножить на 4»); таймер и напоминания («напомни через 10 минут позвонить маме»); заметки («запомни…», «покажи заметки», «удали заметку 2»); открыть приложение или сайт; поиск; видео и музыка («включи музыку Imagine Dragons»); маршрут («маршрут до вокзала»); звонок («позвони +4366412345»); заряд батареи; кубик и монетка; любые вопросы через ИИ. Включи режим «Джарвис» внизу — и я буду слушать, пока приложение открыто.'}
+function help(){return 'Я умею: время и дата; погода («погода в Вене»); посчитай («посчитай 15 умножить на 4»); таймер и напоминания («напомни через 10 минут позвонить маме»); заметки («запомни…», «покажи заметки», «удали заметку 2»); открыть приложение или сайт; поиск; видео и музыка («включи музыку Imagine Dragons»); маршрут («маршрут до вокзала»); звонок («позвони +4366412345»); заряд батареи; кубик и монетка; любые вопросы через ИИ. Создай собственные голосовые сценарии в настройках. Включи режим «'+botN()+'» внизу — и я буду слушать, пока приложение открыто.'}
 function dur(n,u){n=+n;return n*(/^сек/.test(u)?1000:/^мин/.test(u)?60000:3600000)}
 function addReminder(ms,text){if(NATIVE&&ms>=1000){Android.setTimer(Math.round(ms/1000),text);return}const r={at:Date.now()+ms,text};reminders.push(r);write('jarvis_rem',reminders);arm(r);if('Notification'in window&&Notification.permission==='default')Notification.requestPermission()}
-function arm(r){const ms=r.at-Date.now();if(ms<=0||ms>2147483000)return;setTimeout(()=>{reminders=reminders.filter(x=>x!==r&&x.at!==r.at);write('jarvis_rem',reminders);if(navigator.vibrate)navigator.vibrate([300,150,300]);try{if(Notification.permission==='granted')new Notification('JARVIS',{body:r.text})}catch{}say(r.text)},ms)}
+function arm(r){const ms=r.at-Date.now();if(ms<=0||ms>2147483000)return;setTimeout(()=>{reminders=reminders.filter(x=>x!==r&&x.at!==r.at);write('jarvis_rem',reminders);if(navigator.vibrate)navigator.vibrate([300,150,300]);try{if(Notification.permission==='granted')new Notification(botN(),{body:r.text})}catch{}say(r.text)},ms)}
 const WX={0:'ясно',1:'почти ясно',2:'переменная облачность',3:'пасмурно',45:'туман',48:'изморозь',51:'морось',53:'морось',55:'сильная морось',61:'небольшой дождь',63:'дождь',65:'сильный дождь',71:'небольшой снег',73:'снег',75:'сильный снег',80:'ливень',81:'ливень',82:'сильный ливень',95:'гроза',96:'гроза с градом',99:'гроза с градом'};
 async function weather(city){
   try{let lat,lon,name=city;
@@ -49,11 +52,11 @@ if(!P){P={list:[],active:'',failover:true};
   if(settings.visKey)P.list.push({id:'p2',name:'Gemini',base:settings.visBase,model:settings.visModel,key:settings.visKey,vision:true});
   P.active=P.list[0]?P.list[0].id:'';write('jarvis_prov',P)}
 function actProv(){return P.list.find(p=>p.id===P.active&&p.key)||P.list.find(p=>p.key)||null}
-function refreshProv(){const a=actProv();$('provBtn').textContent='◉ '+(a?a.name:'Нет ИИ')}
+function refreshProv(){const a=actProv();$('provBtn').querySelector('span').textContent=(a?a.name:'Нет ИИ')}
 function saveP(){write('jarvis_prov',P);refreshProv()}
 function renderProv(){const box=$('provList');box.replaceChildren();
   if(!P.list.length){const h=document.createElement('p');h.className='hint';h.textContent='Список пуст. Добавьте нейросеть и вставьте ключ.';box.append(h)}
-  for(const p of P.list){const r=document.createElement('div');r.className='prow';const b=document.createElement('button');b.type='button';b.className='pmain'+(p.id===P.active?' act':'');b.textContent=(p.id===P.active?'● ':'○ ')+p.name+(p.vision?'  📷':'');const sm=document.createElement('small');sm.textContent=p.model;if(!p.key){sm.textContent+=' • нет ключа';sm.className='nokey'}b.append(sm);b.onclick=()=>{P.active=p.id;saveP();renderProv()};const e=document.createElement('button');e.type='button';e.className='pedit';e.textContent='✎';e.onclick=()=>editProv(p);r.append(b,e);box.append(r)}
+  for(const p of P.list){const r=document.createElement('div');r.className='prow';const b=document.createElement('button');b.type='button';b.className='pmain'+(p.id===P.active?' act':'');b.textContent=p.name+(p.vision?' · фото':'');const sm=document.createElement('small');sm.textContent=p.model;if(!p.key){sm.textContent+=' • нет ключа';sm.className='nokey'}b.append(sm);b.onclick=()=>{P.active=p.id;saveP();renderProv()};const e=document.createElement('button');e.type='button';e.className='pedit';e.innerHTML=ic('edit');e.onclick=()=>editProv(p);r.append(b,e);box.append(r)}
   $('failover').checked=P.failover}
 let editing=null;
 function editProv(p){editing=p||{id:'p'+Date.now(),name:'',base:'',model:'',key:'',vision:false,isNew:true};$('pName').value=editing.name;$('pBase').value=editing.base;$('pModel').value=editing.model;$('pKey').value=editing.key;$('pVision').checked=editing.vision;$('pDel').style.display=p?'':'none';$('pModelsOut').textContent='';$('provEdit').showModal()}
@@ -78,21 +81,31 @@ async function translate(text,l){
   try{const a=await ask([{role:'system',content:'Ты переводчик. Переведи текст пользователя на '+l[2]+' язык. Выведи только перевод, без пояснений и кавычек.'},{role:'user',content:text}],600);say(l[2][0].toUpperCase()+l[2].slice(1)+': '+a,l[1],a)}
   catch(e){say('Не удалось перевести: '+e.message)}}
 async function ai(text){
-  if(!P.list.some(p=>p.key)){say('Подключите нейросеть: нажмите на название вверху (◉) и добавьте API-ключ.');return}
+  if(!P.list.some(p=>p.key)){say('Подключите нейросеть: нажмите на название вверху (кнопка нейросети) и добавьте API-ключ.');return}
   state('ДУМАЮ…','ОБРАБОТКА ЗАПРОСА');
-  const style={formal:'спокойно, умно и лаконично, с лёгкой иронией, как Джарвис Тони Старка',friendly:'дружелюбно и остроумно',tactical:'максимально кратко'}[settings.personality];
-  const sys=`Ты JARVIS — голосовой ассистент на телефоне. Отвечай по-русски ${style}, обычно 1-3 предложения, без markdown и списков. Обращайся к пользователю: «${settings.ownerName||'сэр'}». Сейчас ${new Date().toLocaleString('ru-RU')}. Заметки пользователя: ${notes.join('; ')||'нет'}.`;
+  const style={formal:'спокойно, умно и лаконично, с лёгкой иронией',friendly:'дружелюбно и остроумно',hraz:'как ХРАЗ, дерзкая, самоуверенная и остроумная говорящая перчатка с искусственным интеллектом из Atomic Heart: ироничные подколки, чёрный юмор, советский колорит и немного высокомерия, но всегда по делу, без мата и без оскорблений',tactical:'максимально кратко'}[settings.personality];
+  const sys=`Ты ${settings.personality==='hraz'?'ХРАЗ':botN()} — голосовой ассистент на телефоне. Отвечай по-русски ${style}, обычно 1-3 предложения, без markdown и списков. Обращайся к пользователю: «${settings.ownerName||'сэр'}». Сейчас ${new Date().toLocaleString('ru-RU')}. Заметки пользователя: ${notes.join('; ')||'нет'}.`;
   chat.push({role:'user',content:text});chat=chat.slice(-12);
   try{const a=await ask([{role:'system',content:sys},...chat],350);chat.push({role:'assistant',content:a});write('jarvis_chat',chat);say(a)}
   catch(e){chat.pop();say('Не удалось связаться с ИИ: '+e.message)}}
+// Пользовательские голосовые сценарии
+let routines=read('jarvis_routines',[]);
+function renderRoutines(){const box=$('routinesList');if(!box)return;box.replaceChildren();if(!routines.length){const p=document.createElement('p');p.className='hint';p.textContent='Пока сценариев нет — создай первый ниже.';box.append(p);return}routines.forEach((r,i)=>{const row=document.createElement('div');row.className='routine-row';const info=document.createElement('div');const b=document.createElement('b');b.textContent=r.name;const sm=document.createElement('small');sm.textContent='Фраза: «'+r.phrase+'» · действий: '+r.steps.length;info.append(b,sm);const del=document.createElement('button');del.type='button';del.className='primary';del.textContent='Удалить';del.onclick=()=>{routines.splice(i,1);write('jarvis_routines',routines);renderRoutines()};row.append(info,del);box.append(row)})}
+function openRoutines(){renderRoutines();$('routinesDialog').showModal()}
+function saveRoutine(){const name=$('routineName').value.trim(),phrase=$('routinePhrase').value.trim(),app=$('routineApp').value.trim(),url=$('routineUrl').value.trim(),steps=[...document.querySelectorAll('.rstep:checked')].map(x=>x.value);if(!name||!phrase||!steps.length){return say('Укажи название, фразу и хотя бы одно действие.')}if(steps.includes('openApp')&&!app)return say('Укажи название приложения.');if(steps.includes('url')&&!/^https?:\/\//i.test(url))return say('Укажи полный адрес сайта, начинающийся с https:// или http://.');routines.push({id:Date.now(),name,phrase:phrase.toLowerCase(),app,url,steps});write('jarvis_routines',routines);$('routineName').value='';$('routinePhrase').value='';$('routineApp').value='';$('routineUrl').value='';document.querySelectorAll('.rstep').forEach(x=>x.checked=false);renderRoutines();say('Сценарий «'+name+'» сохранён. Скажи «'+phrase+'», чтобы запустить его.')}
+function runRoutine(r){say('Запускаю сценарий «'+r.name+'».');let delay=0;r.steps.forEach(step=>{setTimeout(()=>{try{if(step==='openApp'){if(NATIVE)Android.openApp(r.app);else say('Открытие установленного приложения доступно в APK.')}else if(step==='url')go(r.url);else if(step==='volumeUp'&&NATIVE)Android.volume(1);else if(step==='volumeDown'&&NATIVE)Android.volume(-1);else if(step==='mediaPlay'&&NATIVE)Android.media('play');else if(step==='mediaPause'&&NATIVE)Android.media('pause');else if(step==='torchOn'&&NATIVE)Android.torch(true);else if(step==='torchOff'&&NATIVE)Android.torch(false);else if(step==='wifi'&&NATIVE)Android.openSettings('wifi');else if(step==='home'&&NATIVE)Android.goHome();}catch(e){log('sys','Не удалось выполнить действие сценария: '+step,'error')}},delay);delay+=650})}
+function matchRoutine(s){return routines.find(r=>s===r.phrase||s==='включи '+r.phrase||s==='запусти '+r.phrase||s==='активируй '+r.phrase)}
+$('routinesBtn')?.addEventListener('click',openRoutines);$('routinesClose')?.addEventListener('click',()=>$('routinesDialog').close());$('routineSave')?.addEventListener('click',saveRoutine);
+
 function handleCommand(raw){const c=raw.trim();if(!c)return;log('user',c,'user');$('textCommand').value='';autosize();const s=c.toLowerCase().replace(/[!?.,]/g,'').trim();let m;
+const custom=matchRoutine(s);if(custom){runRoutine(custom);return}
 if(convo&&/^(стоп|хватит|закончи разговор|выключи разговор)$/.test(s)){setConvo(false);return say('Режим разговора выключен.')}
 if(/^(режим разговора|давай поговорим|поговорим)$/.test(s)){say('Режим разговора включён. Скажите «стоп», чтобы выйти.');return setConvo(true,true)}
-if(/^(привет|здравствуй|добрый день|доброе утро|добрый вечер|здарова)/.test(s))return say(settings.personality==='tactical'?'На связи. Жду задачу.':`Привет${settings.ownerName?', '+settings.ownerName:''}. Все системы в норме. Что делаем?`);
+if(/^(привет|здравствуй|добрый день|доброе утро|добрый вечер|здарова)/.test(s))return say(settings.personality==='hraz'?'Ну здравствуй. Чем на этот раз озаботишь старую перчатку?':settings.personality==='tactical'?'На связи. Жду задачу.':`Привет${settings.ownerName?', '+settings.ownerName:''}. Все системы в норме. Что делаем?`);
 if(/^(помощь|что ты умеешь|команды)/.test(s))return say(help());
 if(/который час|сколько времени|текущее время/.test(s))return say('Сейчас '+new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})+'.');
 if(/какое сегодня число|какая сегодня дата|какой сегодня день|сегодняшняя дата/.test(s))return say('Сегодня '+new Date().toLocaleDateString('ru-RU',{weekday:'long',year:'numeric',month:'long',day:'numeric'})+'.');
-if(/как тебя зовут|кто ты/.test(s))return say('Я JARVIS Mobile, ваш персональный ассистент: голос, команды, память и языковая модель.');
+if(/как тебя зовут|кто ты/.test(s))return say('Я '+botN()+', ваш персональный ассистент: голос, команды, память и языковая модель.');
 if(m=s.match(/меня зовут\s+(.+)/)){settings.ownerName=m[1];write('jarvis_settings',settings);updateClock();return say('Рад знакомству, '+m[1]+'.')}
 if(/погод/.test(s)){m=s.match(/погод\w*\s+(?:в|во|для)\s+(.+?)(?:\s+(?:сейчас|сегодня))?$/);return weather(m&&m[1])}
 if(m=s.match(/^(?:посчитай|сколько будет|вычисли|реши)\s+(.+)/)){const r=calc(m[1]);if(r!==null)return say(m[1]+' = '+r)}
@@ -127,7 +140,7 @@ if(m=c.match(/^переведи(?:те)?\s+(?:это\s+)?на\s+(\S+?)[:,\s]+([\
 if(m=c.match(/^как\s+(?:будет|сказать)\s+([\s\S]+?)\s+по[\s-]*(\S+)$/i)){const l=findLang(m[2].toLowerCase());if(l)return translate(m[1].trim(),l)}
 if(/^(сфотографируй\w*|сделай (фото|снимок)|сфоткай|что на камере|что это|что я вижу|что передо мной|посмотри( на это)?)$/.test(s)){say('Открываю камеру.');return setTimeout(()=>takePhoto(),900)}
 if(/(выбери|загрузи|добавь|открой)\s+(?:фото|картинку|изображение|галерею)/.test(s)){say('Выберите фото.');return setTimeout(()=>pickPhoto(),900)}
-if(/(на фото|на картинке|на изображении|на снимке)/.test(s))return lastPhoto?vision(c,lastPhoto):say('Сначала пришлите фото: кнопки 📷 и 🖼 или команда «сфотографируй».');
+if(/(на фото|на картинке|на изображении|на снимке)/.test(s))return lastPhoto?vision(c,lastPhoto):say('Сначала пришлите фото: кнопки камеры и галереи или команда «сфотографируй».');
 if(/фонарик/.test(s)){const on=!/(выключи|погаси|отключи|выруби)/.test(s);return say(NATIVE&&Android.torch(on)?(on?'Фонарик включён.':'Фонарик выключен.'):'Фонарик доступен только в Android-версии.')}
 if(NATIVE&&/(откр|настро).*(wi-?fi|вай-?фай)/.test(s)){say('Открываю настройки Wi-Fi.');return setTimeout(()=>Android.openSettings('wifi'),900)}
 if(NATIVE&&/(откр|настро).*(bluetooth|блютуз)/.test(s)){say('Открываю настройки Bluetooth.');return setTimeout(()=>Android.openSettings('bluetooth'),900)}
@@ -141,9 +154,9 @@ if(m=s.match(/^(?:позвони|набери)\s+(.+)/)){const n=m[1].replace(/[
 ai(c)}
 let onceMode=false;
 function stopRec(){listening=false;wCycle++;try{NATIVE?Android.stopListen():recognition&&recognition.abort()}catch{}}
-function gotText(t){if(!t)return;silent=0;gotSpeech=true;if(captureText){const f=captureText;captureText=null;return f(t)}if(!onceMode){const w=t.match(/(джарвис|жарвис|джарвиз|jarvis|гарвис)[,\s]*/i);if(!w)return;const r=t.slice(w.index+w[0].length).trim();return r?handleCommand(r):say('Слушаю, '+(settings.ownerName||'сэр')+'.')}handleCommand(t)}
+function gotText(t){if(!t)return;silent=0;gotSpeech=true;if(captureText){const f=captureText;captureText=null;return f(t)}if(!onceMode){const w=t.match(wakeRe());if(!w)return;const r=t.slice(w.index+w[0].length).trim();return r?handleCommand(r):say('Слушаю, '+(settings.ownerName||'сэр')+'.')}handleCommand(t)}
 function micErr(e){if(chkWait&&e!=='aborted'){chkWait=false;captureText=null;chkLine('hear','❌','Тест слуха',e==='no-speech'?'Речь не распознана. Повторите громче и ближе к микрофону.':'Ошибка: '+e)}if(e==='not-allowed'||e==='service-not-allowed'){always=false;setWake();log('sys','Нет доступа к микрофону. Разрешите его в настройках Android.','error')}else if(e!=='no-speech'&&e!=='aborted')log('sys','Ошибка микрофона: '+e,'error')}
-function started(){listening=true;const w=always&&!onceMode;$('micLabel').textContent=w?'ЖДУ «ДЖАРВИС»':'СЛУШАЮ ТЕБЯ…';state(w?'ЖДУ СЛОВО «ДЖАРВИС»':'ОЖИДАЮ КОМАНДУ','ГОЛОСОВОЙ ВВОД АКТИВЕН')}
+function started(){listening=true;const w=always&&!onceMode;$('micLabel').textContent=w?'ЖДУ «'+botN().toUpperCase()+'»':'СЛУШАЮ ТЕБЯ…';state(w?'ЖДУ СЛОВО «'+botN().toUpperCase()+'»':'ОЖИДАЮ КОМАНДУ','ГОЛОСОВОЙ ВВОД АКТИВЕН')}
 function ended(){listening=false;$('micLabel').textContent='НАЖМИ И ГОВОРИ';idle();
   if(convo&&!speaking){if(gotSpeech)gotSpeech=false;else if(++silent>=3){setConvo(false);log('sys','Режим разговора выключен: долго не было речи.')}else setTimeout(()=>listen(true),300)}
   else if(always&&!speaking)setTimeout(()=>listen(false),350)}
@@ -156,17 +169,17 @@ function listen(once){if(speaking||listening)return;onceMode=!!once;
   recognition.onstart=started;recognition.onresult=e=>gotText(e.results[e.results.length-1][0].transcript.trim());recognition.onerror=e=>micErr(e.error);recognition.onend=ended;
   try{recognition.start()}catch{listening=false}}
 function micClick(){if(listening){stopRec();ended();return}stopAllSpeech();speaking=false;listen(true)}
-function setWake(){$('wakeBtn').textContent='🎧 «Джарвис»: '+(always?'вкл':'выкл');$('wakeBtn').classList.toggle('on',always)}
+function setWake(){$('wakeBtn').querySelector('span').textContent='«'+botN()+'»: '+(always?'вкл':'выкл');$('wakeBtn').classList.toggle('on',always)}
 async function wake(){always=!always;setWake();
-  if(always){try{NATIVE?Android.keepAwake(true):wakeLock=await navigator.wakeLock.request('screen')}catch{}listen(false);say('Режим ожидания включён. Скажите «Джарвис» и команду. Экран должен оставаться включённым.')}
+  if(always){try{NATIVE?Android.keepAwake(true):wakeLock=await navigator.wakeLock.request('screen')}catch{}listen(false);say('Режим ожидания включён. Скажите «'+botN()+'» и команду. Экран должен оставаться включённым.')}
   else{stopRec();try{NATIVE?Android.keepAwake(false):wakeLock&&wakeLock.release()}catch{}idle()}}
 document.addEventListener('visibilitychange',async()=>{if(always&&document.visibilityState==='visible'){try{wakeLock=await navigator.wakeLock.request('screen')}catch{}listen()}});
 let lastPhoto=null;
 function thumb(url){const r=document.createElement('div');r.className='msg user';const b=document.createElement('div');b.className='bubble';const i=document.createElement('img');i.src=url;b.append(i);r.append(b);$('log').append(r);toBottom()}
 async function vision(q,url){
-  if(!P.list.some(p=>p.key&&p.vision))return say('Для фото нужна нейросеть с пометкой 📷 и ключом. Нажмите на название вверху (◉), чтобы добавить.');
+  if(!P.list.some(p=>p.key&&p.vision))return say('Для фото нужна нейросеть с пометкой «фото» и ключом. Нажмите на название вверху (кнопка нейросети), чтобы добавить.');
   state('СМОТРЮ…','АНАЛИЗ ИЗОБРАЖЕНИЯ');
-  try{const a=await ask([{role:'system',content:'Ты JARVIS, голосовой ассистент. Отвечай по-русски кратко и по делу, без markdown. Если на фото есть текст, прочитай или переведи его по просьбе.'},{role:'user',content:[{type:'text',text:q},{type:'image_url',image_url:{url}}]}],1500,true);say(a)}
+  try{const a=await ask([{role:'system',content:'Ты '+botN()+', голосовой ассистент. Отвечай по-русски кратко и по делу, без markdown. Если на фото есть текст, прочитай или переведи его по просьбе.'},{role:'user',content:[{type:'text',text:q},{type:'image_url',image_url:{url}}]}],1500,true);say(a)}
   catch(e){say('Не удалось распознать фото: '+e.message)}}
 function gotPhoto(url){lastPhoto=url;if(photoMode){const mode=photoMode;photoMode=null;return studyPhoto(mode,url)}thumb(url);vision('Опиши, что на фото. Если там есть текст, прочитай его.',url)}
 window.onNativePhoto=gotPhoto;
@@ -190,78 +203,154 @@ $('pSave').onclick=()=>{const e=editing;e.name=$('pName').value.trim()||'Ней�
 $('pDel').onclick=()=>{P.list=P.list.filter(p=>p!==editing);if(P.active===editing.id)P.active=(P.list.find(p=>p.key)||{}).id||'';saveP();renderProv();$('provEdit').close()};
 $('pModels').onclick=async()=>{const out=$('pModelsOut'),base=$('pBase').value.trim(),key=$('pKey').value.trim();if(!base||!key){out.textContent='Сначала укажите адрес и ключ.';return}out.textContent='Загружаю…';try{const r=await fetch(base.replace(/\/$/,'')+'/models',{headers:{Authorization:'Bearer '+key}});const d=await r.json();const ids=(d.data||d.models||[]).map(m=>(m.id||m.name||'').replace(/^models\//,'')).filter(Boolean);out.textContent=ids.length?'Модели: '+ids.slice(0,40).join(', '):'Список пуст: '+JSON.stringify(d).slice(0,200)}catch(e){out.textContent='Не удалось получить список: '+e.message}};
 document.querySelectorAll('[data-command]').forEach(b=>b.addEventListener('click',()=>handleCommand(b.dataset.command)));
-$('settingsBtn').onclick=()=>{for(const k of['ownerName','personality','city'])$(k).value=settings[k];$('voiceReplies').checked=settings.voiceReplies;$('saveHistory').checked=settings.saveHistory;$('settingsDialog').showModal()};
-$('saveSettings').onclick=()=>{settings={...settings,ownerName:$('ownerName').value.trim(),personality:$('personality').value,voiceReplies:$('voiceReplies').checked,saveHistory:$('saveHistory').checked,city:$('city').value.trim()};write('jarvis_settings',settings);if(!settings.saveHistory){history=[];write('jarvis_history',[]);$('log').replaceChildren()}updateClock();say('Настройки сохранены.')};
+$('settingsBtn').onclick=()=>{for(const k of['botName','ownerName','personality','city'])$(k).value=settings[k];$('voiceReplies').checked=settings.voiceReplies;$('saveHistory').checked=settings.saveHistory;$('settingsDialog').showModal()};
+$('saveSettings').onclick=()=>{settings={...settings,ownerName:$('ownerName').value.trim(),personality:$('personality').value,voiceReplies:$('voiceReplies').checked,saveHistory:$('saveHistory').checked,city:$('city').value.trim(),botName:$('botName').value.trim()||'Вектор'};write('jarvis_settings',settings);if(!settings.saveHistory){history=[];write('jarvis_history',[]);$('log').replaceChildren()}updateClock();applyPersona();say('Настройки сохранены.')};
 $('saveNote').onclick=()=>{const n=$('noteText').value.trim();if(n){notes.push(n);write('jarvis_notes',notes);say('Заметка сохранена.')}};
 $('clearLog').onclick=()=>{history=[];write('jarvis_history',[]);$('log').replaceChildren();log('sys','Журнал очищен.')};
-let ST=read('jarvis_study',{mat:{},scores:{}}),photoMode=null,captureText=null,exam=null;
+/* ===== УЧЁБА v2 ===== */
+let photoMode=null,captureText=null,exam=null,stNav={n:'home'};
 window.onNativeInfo=m=>log('sys',m);
 function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e}
-const stOut=()=>$('stOut');
-function stSaveTopic(){const t=$('stTopic').value.trim();if(t){ST.mat[t]=$('stMat').value;write('jarvis_study',ST)}return t}
-function stList(){$('stTopics').replaceChildren(...Object.keys(ST.mat).map(k=>{const o=document.createElement('option');o.value=k;return o}))}
-function stScoresShow(t){const a=(ST.scores[t]||[]).slice(-5);$('stScores').textContent=a.length?'Последние тесты: '+a.map(x=>x.s+'/'+x.n).join(', '):''}
-function openStudy(topic,mode){stList();if(topic){$('stTopic').value=topic;$('stMat').value=ST.mat[topic]||''}stScoresShow($('stTopic').value.trim());if(!$('studyDialog').open)$('studyDialog').showModal();if(mode)stRun(mode)}
-function stBase(){const t=stSaveTopic(),m=$('stMat').value.trim().slice(0,6000);if(!t&&!m){stOut().replaceChildren(el('p','hint','Введите предмет или тему, либо вставьте материал.'));return null}return{t,m,src:(t?'Тема: '+t+'\n':'')+(m?'Материал:\n'+m:'')}}
+function inl(p,t){t.split(/(\*\*[^*]+\*\*|`[^`]+`)/).forEach(x=>{if(!x)return;if(x.length>4&&x.startsWith('**')&&x.endsWith('**')){const b=document.createElement('b');b.textContent=x.slice(2,-2);p.append(b)}else if(x.length>2&&x.startsWith('`')&&x.endsWith('`')){const c=document.createElement('code');c.textContent=x.slice(1,-1);p.append(c)}else p.append(document.createTextNode(x))})}
+function md(t){const f=document.createDocumentFragment();String(t).split('```').forEach((part,i)=>{if(i%2){const pre=document.createElement('pre');pre.className='code';pre.textContent=part.replace(/^[\w+-]*\n/,'').replace(/\n$/,'');f.append(pre);return}
+  part.split('\n').forEach(line=>{const s=line.trimEnd();if(!s.trim())return;let m;const d=document.createElement('div');
+    if(m=s.match(/^#{1,4}\s+(.*)/)){d.className='mdh';inl(d,m[1])}
+    else if(m=s.match(/^\s*[-*•]\s+(.*)/)){d.className='mdli';d.append(document.createTextNode('•\u00a0'));inl(d,m[1])}
+    else if(m=s.match(/^\s*(\d+[.)])\s+(.*)/)){d.className='mdli';d.append(document.createTextNode(m[1]+'\u00a0'));inl(d,m[2])}
+    else{d.className='mdp';inl(d,s)}
+    f.append(d)})});return f}
+let SD=read('jarvis_study2',null)||{xp:0,streak:{last:'',n:0},courses:[],deck:[],hist:[]};
+const sid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const day=(t=Date.now())=>new Date(t).toISOString().slice(0,10);
+const lvl=()=>Math.floor(Math.sqrt(SD.xp/50))+1;
+const dueCards=()=>SD.deck.filter(c=>c.due<=Date.now());
+const sb=()=>$('stBody');
+function sv(){write('jarvis_study2',SD);$('stXp').textContent='Ур. '+lvl()+' · '+SD.xp+' XP'}
+function addXp(n){SD.xp+=n;const t=day();if(SD.streak.last!==t){SD.streak.n=SD.streak.last===day(Date.now()-864e5)?SD.streak.n+1:1;SD.streak.last=t}sv()}
+function flash(t){const f=el('div','flashmsg',t);document.body.append(f);setTimeout(()=>f.remove(),3200)}
+function ib(cls,icon,text,fn){const b=el('button',cls);if(icon)b.insertAdjacentHTML('afterbegin',ic(icon));if(text)b.append(el('span','',text));b.onclick=fn;return b}
+function nav(n,a){stNav={n,a};const o=sb();o.replaceChildren();o.scrollTop=0;({home:stHome,new:stNew,course:stCourse,lesson:stLesson,review:stReview,exam:stExam,stats:stStats})[n](a)}
 function parseJSON(t){const a=t.search(/[\[{]/),b=Math.max(t.lastIndexOf(']'),t.lastIndexOf('}'));return JSON.parse(t.slice(a,b+1))}
 const stAsk=(sys,user,max)=>ask([{role:'system',content:sys},{role:'user',content:user}],max);
-const stBusy=x=>stOut().replaceChildren(el('p','hint',x||'Думаю…'));
-async function stRun(mode){
-  const b=stBase();if(!b)return;
-  if(!P.list.some(p=>p.key))return stOut().replaceChildren(el('p','hint','Сначала подключите нейросеть: чип ◉ вверху главного экрана.'));
-  stScoresShow(b.t);
-  try{
-    if(mode==='summary'||mode==='explain'||mode==='plan'){stBusy();
-      const sys={summary:'Ты репетитор. Составь чёткий структурированный конспект: ключевые понятия, определения, формулы и факты короткими пунктами. Без воды. Пиши по-русски.',explain:'Ты терпеливый репетитор. Объясни простыми словами с аналогиями и 2-3 примерами, затем дай короткий вывод. Пиши по-русски.',plan:'Ты репетитор. Составь реалистичный план подготовки на 7 дней: по дням, что изучить, что повторить, как проверить себя. Пиши по-русски.'}[mode];
-      const a=await stAsk(sys,b.src,1500),out=stOut();out.replaceChildren(el('pre','',a));
-      const r=el('button','chip','🔊 Вслух');r.onclick=()=>speak(a);const sv=el('button','chip','💾 В заметки');sv.onclick=()=>{notes.push((b.t||'Учёба')+': '+a.slice(0,500));write('jarvis_notes',notes);sv.textContent='Сохранено'};
-      const row=el('div','row2');row.append(r,sv);out.append(row)}
-    else if(mode==='quiz'){stBusy('Составляю тест…');
-      const a=await stAsk('Ты составитель тестов. Верни ТОЛЬКО JSON-массив без пояснений и markdown.','Составь 6 вопросов с 4 вариантами ответа. Формат: [{"q":"вопрос","options":["а","б","в","г"],"correct":0,"why":"краткое объяснение"}], correct — индекс правильного варианта от 0 до 3.\n\n'+b.src,2500);
-      const qs=parseJSON(a).filter(q=>q&&q.q&&Array.isArray(q.options)&&q.options.length>1&&Number.isInteger(q.correct)&&q.options[q.correct]!==undefined);
-      if(!qs.length)throw new Error('не получилось составить тест, попробуйте ещё раз');runQuiz(qs,b.t||'—')}
-    else if(mode==='cards'){stBusy('Готовлю карточки…');
-      const a=await stAsk('Ты составитель карточек для запоминания. Верни ТОЛЬКО JSON-массив без пояснений и markdown.','Составь 10 карточек. Формат: [{"q":"вопрос или термин","a":"краткий ответ"}].\n\n'+b.src,2500);
-      const cs=parseJSON(a).filter(c=>c&&c.q&&c.a);if(!cs.length)throw new Error('не получилось составить карточки, попробуйте ещё раз');runCards(cs)}
-    else if(mode==='exam'){exam={topic:b.t||'по материалу',src:b.src,msgs:[]};examStep('Начинай экзамен.')}
-  }catch(e){stOut().replaceChildren(el('p','hint','Ошибка: '+e.message))}}
-function runQuiz(qs,topic){let i=0,sc=0;const out=stOut();
-  const show=()=>{out.replaceChildren();
-    if(i>=qs.length){(ST.scores[topic]=ST.scores[topic]||[]).push({s:sc,n:qs.length});write('jarvis_study',ST);stScoresShow(topic);out.append(el('div','st-q','Результат: '+sc+' из '+qs.length+(sc===qs.length?'. Отлично!':sc>=qs.length/2?'. Неплохо, повторите ошибки.':'. Стоит повторить тему.')));const again=el('button','chip on','Новый тест');again.onclick=()=>stRun('quiz');out.append(again);return}
-    const q=qs[i];out.append(el('div','st-h','ВОПРОС '+(i+1)+' ИЗ '+qs.length),el('div','st-q',q.q));
-    q.options.forEach((o,k)=>{const b=el('button','opt',o);b.onclick=()=>{out.querySelectorAll('.opt').forEach((x,j)=>{x.disabled=true;if(j===q.correct)x.classList.add('good');else if(j===k)x.classList.add('bad')});if(k===q.correct)sc++;out.append(el('div','st-why',(k===q.correct?'Верно. ':'Неверно. ')+(q.why||'')));const n=el('button','chip on',i+1<qs.length?'Дальше':'Завершить');n.onclick=()=>{i++;show()};out.append(n)};out.append(b)})};
+const stJson=async(sys,user,max)=>parseJSON(await stAsk(sys+' Верни ТОЛЬКО JSON без пояснений и markdown.',user,max));
+const okQ=q=>q&&q.q&&Array.isArray(q.options)&&q.options.length>1&&Number.isInteger(q.correct)&&q.options[q.correct]!==undefined;
+const noAI=()=>!P.list.some(p=>p.key);
+const LEVELS=['1–4 класс','5–6 класс','7–9 класс','10–11 класс','ОГЭ','ЕГЭ','Колледж','Университет','Для себя'];
+const SUBJ=['Математика','Алгебра','Геометрия','Русский язык','Литература','История','Обществознание','География','Биология','Химия','Физика','Информатика','Английский язык','Немецкий язык','Программирование','Другое'];
+const LESS_SYS=c=>'Ты терпеливый репетитор. Пиши по-русски, понятно для уровня «'+c.level+'». Структура: короткое введение; главное в 3–5 пунктах; разбор двух примеров по шагам; частые ошибки; мини-итог. Используй заголовки ## и списки. Формулы пиши простым текстом.';
+function addCards(cards,course){let n=0;for(const c of cards){if(!c||!c.q||!c.a||SD.deck.some(d=>d.q===c.q))continue;SD.deck.push({id:sid(),q:String(c.q),a:String(c.a),why:c.why||'',course,due:Date.now(),iv:0,ef:2.5,n:0});n++}sv();return n}
+function grade(c,g){if(g===1){c.n=0;c.iv=0;c.ef=Math.max(1.3,c.ef-.2);c.due=Date.now()+6e5}else{c.n++;c.iv=c.n===1?(g===4?3:1):c.n===2?(g===4?7:3):Math.max(1,Math.round(c.iv*c.ef*(g===2?.8:g===4?1.3:1)));c.ef=Math.max(1.3,c.ef+(g===4?.1:g===2?-.15:0));c.due=Date.now()+c.iv*864e5}}
+function chipGroup(list,cur,on){const w=el('div','chips2');list.forEach(x=>{const c=el('button','chip'+(x===cur?' on':''),x);c.onclick=()=>{[...w.children].forEach(y=>y.classList.toggle('on',y===c));on(x)};w.append(c)});return w}
+function stRunQuiz(qs,done){let i=0,sc=0;const wrong=[];
+  const show=()=>{const out=sb();out.replaceChildren();if(i>=qs.length)return done(sc,wrong);
+    const q=qs[i];out.append(el('h3','','Вопрос '+(i+1)+' из '+qs.length),el('div','big',q.q));
+    q.options.forEach((o,k)=>{const b=el('button','opt',o);b.onclick=()=>{out.querySelectorAll('.opt').forEach((x,j)=>{x.disabled=true;if(j===q.correct)x.classList.add('good');else if(j===k)x.classList.add('bad')});
+      const ok=k===q.correct;if(ok)sc++;else wrong.push(q);out.append(el('div','why',(ok?'Верно. ':'Неверно. ')+(q.why||'')));
+      const n=ib('go','',i+1<qs.length?'Дальше':'Завершить',()=>{i++;show()});out.append(n);n.scrollIntoView({block:'nearest'})};out.append(b)})};
   show()}
-function runCards(cards){const queue=cards.slice(),total=cards.length,out=stOut();
-  const show=()=>{out.replaceChildren();if(!queue.length){out.append(el('div','st-q','Все карточки выучены 🎉'));const again=el('button','chip on','Ещё карточки');again.onclick=()=>stRun('cards');out.append(again);return}
-    const c=queue[0],card=el('button','flash',c.q);let back=false;card.onclick=()=>{back=!back;card.textContent=back?c.a:c.q;card.classList.toggle('back',back)};
-    const row=el('div','row2'),again=el('button','chip','Повторить'),ok=el('button','chip on','Знаю');again.onclick=()=>{queue.push(queue.shift());show()};ok.onclick=()=>{queue.shift();show()};row.append(again,ok);
-    out.append(el('div','st-h','ОСТАЛОСЬ '+queue.length+' ИЗ '+total+' · НАЖМИ НА КАРТОЧКУ'),card,row)};
+function stHome(){$('stTitle').textContent='Учёба';const o=sb(),due=dueCards().length,L=lvl(),a=50*(L-1)**2,b=50*L*L;
+  const hero=el('div','stcard hero');hero.append(el('div','big','Уровень '+L),el('div','muted',SD.xp+' XP · серия дней: '+SD.streak.n+' · карточек: '+SD.deck.length));
+  const bar=el('div','bar'),i=el('i');i.style.width=Math.min(100,100*(SD.xp-a)/(b-a))+'%';bar.append(i);hero.append(bar);o.append(hero);
+  const g=el('div','grid2');
+  g.append(ib('tile','repeat','Повторить: '+due,()=>nav('review')),ib('tile','plus','Новый курс',()=>nav('new',{})),
+    ib('tile','camera','Решить по фото',()=>{photoMode='solve';takePhoto()}),ib('tile','image','Задача из галереи',()=>{photoMode='solve';pickPhoto()}),
+    ib('tile','scan','Текст с фото',()=>{photoMode='ocr';takePhoto()}),ib('tile','image','Текст из галереи',()=>{photoMode='ocr';pickPhoto()}),
+    ib('tile wide','target','Экзаменатор',()=>nav('exam')),ib('tile wide','chart','Статистика',()=>nav('stats')));
+  o.append(g,el('h3','','Мои курсы'));
+  if(!SD.courses.length)o.append(el('p','muted','Курсов пока нет. Нажмите «Новый курс»: выберите класс, предмет и тему, и я составлю план уроков. Подойдёт любой предмет и любая тема.'));
+  SD.courses.forEach(c=>{const d=c.lessons.filter(l=>l.done).length,card=el('button','stcard course');card.append(el('b','',c.title),el('div','muted',c.level+' · '+c.subject+' · '+d+'/'+c.lessons.length));
+    const p=el('div','bar'),q=el('i');q.style.width=100*d/c.lessons.length+'%';p.append(q);card.append(p);card.onclick=()=>nav('course',c.id);o.append(card)})}
+function stNew(a){$('stTitle').textContent='Новый курс';const o=sb(),f={level:'7–9 класс',subject:'Математика'};
+  const cu=el('input','inp');cu.placeholder='Свой предмет';cu.hidden=true;
+  o.append(el('h3','','Класс или уровень'),chipGroup(LEVELS,f.level,v=>f.level=v),el('h3','','Предмет'),chipGroup(SUBJ,f.subject,v=>{f.subject=v;cu.hidden=v!=='Другое'}),cu);
+  const tp=el('input','inp');tp.placeholder='Например: дроби, Вторая мировая война, времена глаголов';tp.value=a&&a.t||'';
+  const mt=el('textarea','inp');mt.rows=4;mt.placeholder='Вставьте конспект или текст, и я составлю уроки по нему';mt.value=a&&a.m||'';
+  o.append(el('h3','','Тема (можно оставить пустой)'),tp,el('h3','','Свой материал (по желанию)'),mt);
+  const msg=el('p','muted');
+  const b=ib('go','spark','Составить курс',async()=>{if(noAI())return msg.textContent='Сначала подключите нейросеть: значок вверху главного экрана.';
+    const subj=f.subject==='Другое'?(cu.value.trim()||'Свободная тема'):f.subject,topic=tp.value.trim(),mat=mt.value.trim().slice(0,6000);b.disabled=true;msg.textContent='Составляю план уроков…';
+    try{const d=await stJson('Ты опытный репетитор и методист.','Составь курс для ученика: уровень «'+f.level+'», предмет «'+subj+'», тема «'+(topic||'весь основной курс этого уровня')+'».'+(mat?'\nОпирайся на материал:\n'+mat:'')+'\nФормат: {"title":"название курса","lessons":[{"t":"название урока","g":"чему научится ученик"}]}. 8–10 уроков от простого к сложному.',1500);
+      if(!d||!Array.isArray(d.lessons)||d.lessons.length<2)throw new Error('нейросеть вернула неправильный план, попробуйте ещё раз');
+      const c={id:sid(),title:String(d.title||topic||subj),level:f.level,subject:subj,topic,mat,lessons:d.lessons.slice(0,12).map(l=>({t:String(l.t||'Урок'),g:String(l.g||''),body:'',done:false,score:null}))};
+      SD.courses.unshift(c);sv();nav('course',c.id)}catch(e){msg.textContent='Не получилось: '+e.message;b.disabled=false}});
+  o.append(b,msg)}
+function stCourse(id){const c=SD.courses.find(x=>x.id===id);if(!c)return nav('home');$('stTitle').textContent=c.title;const o=sb(),d=c.lessons.filter(l=>l.done).length;
+  o.append(el('div','muted',c.level+' · '+c.subject+' · пройдено '+d+' из '+c.lessons.length));const bar=el('div','bar'),i=el('i');i.style.width=100*d/c.lessons.length+'%';bar.append(i);o.append(bar);
+  c.lessons.forEach((l,k)=>{const b=el('button','stcard les'+(l.done?' done':'')),n=el('span','n',l.done?'':String(k+1));if(l.done)n.insertAdjacentHTML('afterbegin',ic('check'));
+    const t=el('div');t.append(el('b','',l.t),el('div','muted',l.g||''));b.append(n,t);b.onclick=()=>nav('lesson',{id,k});o.append(b)});
+  const r=el('div','row2'),del=ib('ghost','trash','Удалить',()=>{if(!del.dataset.s){del.dataset.s=1;del.lastChild.textContent='Точно удалить?';return}SD.courses=SD.courses.filter(x=>x!==c);sv();nav('home')});
+  r.append(ib('ghost','target','Итоговый тест',()=>stFinal(c)),del);o.append(r)}
+async function stLesson(a){const c=SD.courses.find(x=>x.id===a.id),l=c&&c.lessons[a.k];if(!l)return nav('home');$('stTitle').textContent='Урок '+(a.k+1);const o=sb();o.append(el('h3','',c.title),el('div','big',l.t));
+  const fetchBody=async(extra)=>{l.body=await stAsk(LESS_SYS(c)+(extra||''),'Курс: '+c.title+'. Урок '+(a.k+1)+': '+l.t+'. Цель: '+l.g+'.'+(c.mat?'\nМатериал ученика:\n'+c.mat.slice(0,4000):''),1800);sv()};
+  if(!l.body){if(noAI()){o.append(el('p','muted','Сначала подключите нейросеть: значок вверху главного экрана.'));return}
+    const p=el('p','muted','Готовлю урок…');o.append(p);try{await fetchBody()}catch(e){p.textContent='Не получилось: '+e.message;o.append(ib('go','repeat','Повторить',()=>nav('lesson',a)));return}
+    if(stNav.a!==a)return;p.remove()}
+  const card=el('div','stcard lesson');card.append(md(l.body));o.append(card);
+  const r1=el('div','row2');r1.append(ib('ghost','volume','Слушать',()=>speak(l.body)),ib('ghost','repeat','Объяснить проще',async()=>{o.append(el('p','muted','Переписываю проще…'));try{await fetchBody(' Объясни ещё проще, как для ученика, которому тема даётся трудно.');nav('lesson',a)}catch(e){flash('Не получилось: '+e.message)}}));
+  const r2=el('div','row2');r2.append(ib('go','check','Проверить себя',()=>stQuiz(c,a.k)),ib('ghost','cards','Карточки',()=>stCards(c,a.k)));o.append(r1,r2);
+  o.append(el('h3','','Спросить репетитора'));const tq=el('input','inp'),ans=el('div');tq.placeholder='Вопрос по этому уроку';
+  const askB=ib('ghost','send','Спросить',async()=>{const v=tq.value.trim();if(!v)return;tq.value='';const q=el('div','muted','Вы: '+v),w=el('div','stcard');ans.prepend(w);ans.prepend(q);w.textContent='…';
+    try{const t=await ask([{role:'system',content:'Ты репетитор. Отвечай по-русски, коротко и ясно, опираясь на урок.\n\nУрок:\n'+l.body.slice(0,3500)},{role:'user',content:v}],700);w.replaceChildren(md(t))}catch(e){w.textContent='Не получилось: '+e.message}});
+  o.append(tq,askB,ans);
+  const nv=el('div','row2');if(a.k>0)nv.append(ib('ghost','back','Назад',()=>nav('lesson',{id:a.id,k:a.k-1})));if(a.k<c.lessons.length-1)nv.append(ib('ghost','play','Следующий',()=>nav('lesson',{id:a.id,k:a.k+1})));o.append(nv)}
+function quizResult(title,sc,n,extra,btns){const o=sb();o.replaceChildren();const h=el('div','stcard hero');h.append(el('div','big',sc+' из '+n),el('div','muted',extra));o.append(h);const r=el('div','row2');btns.forEach(b=>r.append(b));o.append(r)}
+async function stQuiz(c,k){const l=c.lessons[k];$('stTitle').textContent='Проверка';sb().replaceChildren(el('p','muted','Составляю вопросы…'));
+  try{const qs=(await stJson('Ты составитель тестов.','Составь 5 вопросов с 4 вариантами ответа (разной сложности) по уроку «'+l.t+'» курса «'+c.title+'», уровень «'+c.level+'». Формат: [{"q":"вопрос","options":["а","б","в","г"],"correct":0,"why":"краткое объяснение"}], correct — индекс от 0 до 3.'+(l.body?'\nУрок:\n'+l.body.slice(0,2500):''),2500)).filter(okQ);if(qs.length<2)throw new Error('мало вопросов');
+    stRunQuiz(qs,(sc,wrong)=>{const pct=sc/qs.length,xp=sc*10+(pct>=.6?20:0);addXp(xp);if(pct>=.6)l.done=true;l.score=Math.max(l.score||0,Math.round(pct*100));SD.hist.push({d:day(),c:c.title,l:l.t,s:sc,n:qs.length});SD.hist=SD.hist.slice(-60);
+      const added=addCards(wrong.map(q=>({q:q.q,a:q.options[q.correct],why:q.why})),c.title);sv();
+      quizResult('',sc,qs.length,(pct>=.6?'Урок пройден. ':'Нужно набрать больше 60%. ')+'XP: +'+xp+(added?'. Ошибок в карточках: '+added+'.':''),[ib('ghost','repeat','Ещё раз',()=>stQuiz(c,k)),ib('go','play','К курсу',()=>nav('course',c.id))])})}
+  catch(e){sb().replaceChildren(el('p','muted','Не получилось: '+e.message),ib('go','repeat','Повторить',()=>stQuiz(c,k)))}}
+async function stFinal(c){$('stTitle').textContent='Итоговый тест';sb().replaceChildren(el('p','muted','Составляю итоговый тест…'));
+  try{const qs=(await stJson('Ты составитель тестов.','Составь 8 вопросов с 4 вариантами ответа для итогового теста по курсу «'+c.title+'» (уровень «'+c.level+'»). Уроки: '+c.lessons.map(l=>l.t).join('; ')+'. Формат: [{"q":"вопрос","options":["а","б","в","г"],"correct":0,"why":"краткое объяснение"}].',3000)).filter(okQ);if(qs.length<3)throw new Error('мало вопросов');
+    stRunQuiz(qs,(sc,wrong)=>{const xp=sc*12;addXp(xp);SD.hist.push({d:day(),c:c.title,l:'Итоговый тест',s:sc,n:qs.length});addCards(wrong.map(q=>({q:q.q,a:q.options[q.correct],why:q.why})),c.title);sv();quizResult('',sc,qs.length,'XP: +'+xp+'. Ошибки добавлены в карточки.',[ib('go','play','К курсу',()=>nav('course',c.id))])})}
+  catch(e){sb().replaceChildren(el('p','muted','Не получилось: '+e.message),ib('go','repeat','Повторить',()=>stFinal(c)))}}
+async function stCards(c,k){const l=c.lessons[k];flash('Составляю карточки…');
+  try{const cs=await stJson('Ты составитель карточек для запоминания.','Составь 8 карточек по уроку «'+l.t+'» курса «'+c.title+'». Формат: [{"q":"вопрос или термин","a":"краткий ответ"}].'+(l.body?'\nУрок:\n'+l.body.slice(0,2500):''),2000);const n=addCards(cs,c.title);flash('Добавлено карточек: '+n+'. Повторяйте их в разделе «Повторить».')}catch(e){flash('Не получилось: '+e.message)}}
+function stReview(){$('stTitle').textContent='Повторение';const q=dueCards().sort(()=>Math.random()-.5).slice(0,20),total=q.length;let done=0;
+  const show=()=>{const o=sb();o.replaceChildren();
+    if(!q.length){if(done)addXp(done*2);o.append(el('div','stcard hero',total?'Готово! Повторено карточек: '+done+'.':'На сегодня карточек нет. Они появляются после уроков и тестов, а ошибки в тестах попадают сюда автоматически.'),ib('go','back','К началу',()=>nav('home')));return}
+    const c=q[0];o.append(el('h3','','Осталось '+q.length+(c.course?' · '+c.course:'')));
+    const card=el('button','flashc',c.q),bar=el('div','row2');
+    const reveal=ib('go','','Показать ответ',()=>{card.textContent=c.a+(c.why?'\n\n'+c.why:'');card.style.whiteSpace='pre-wrap';card.classList.add('back');
+      bar.replaceChildren(...[['Снова',1],['Трудно',2],['Хорошо',3],['Легко',4]].map(([t,g])=>{const b=el('button','ghost',t);b.onclick=()=>{grade(c,g);sv();q.shift();if(g===1)q.push(c);else done++;show()};return b}))});
+    card.onclick=()=>reveal.click();bar.append(reveal);o.append(card,bar)};
   show()}
-async function examStep(text){exam.msgs.push({role:'user',content:text});stBusy('Экзаменатор думает…');
-  try{const a=await ask([{role:'system',content:'Ты экзаменатор по теме «'+exam.topic+'». Ориентируйся на материал:\n'+exam.src+'\n\nЗадавай по одному вопросу за раз, постепенно усложняя. На ответ студента кратко оцени (верно, частично или неверно), поправь ошибки и задай следующий вопрос. Через 8 вопросов подведи итог с оценкой по 5-балльной шкале и советами. Пиши по-русски без markdown.'},...exam.msgs.slice(-14)],700);exam.msgs.push({role:'assistant',content:a});renderExam(a)}
-  catch(e){exam.msgs.pop();stOut().replaceChildren(el('p','hint','Ошибка: '+e.message))}}
-function renderExam(a){const out=stOut();out.replaceChildren(el('div','st-q',a));speak(a);
-  const ta=el('textarea');ta.rows=3;ta.placeholder='Ваш ответ…';
-  const row=el('div','row2'),mic=el('button','chip','🎙 Голосом'),go=el('button','chip on','Ответить'),stop=el('button','chip','Завершить экзамен');
-  mic.onclick=()=>{stopAllSpeech();speaking=false;captureText=t=>{ta.value=(ta.value+' '+t).trim()};listen(true)};
-  go.onclick=()=>{if(ta.value.trim())examStep(ta.value.trim())};stop.onclick=()=>examStep('Заверши экзамен и подведи итог.');
-  row.append(mic,go);out.append(ta,row,stop)}
-async function studyPhoto(mode,url){stBusy('Смотрю на фото…');
-  try{const a=await ask([{role:'system',content:'Ты репетитор. Отвечай по-русски, без markdown.'},{role:'user',content:[{type:'text',text:mode==='solve'?'На фото учебное задание. Реши его по шагам, объясни каждый шаг и дай итоговый ответ. Если условие неразборчиво, скажи об этом.':'Перепиши весь текст с фото полностью и аккуратно, без комментариев.'},{type:'image_url',image_url:{url}}]}],2000,true);
-    if(mode==='ocr'){$('stMat').value=($('stMat').value+'\n'+a).trim();stOut().replaceChildren(el('p','hint','Текст добавлен в поле «Материал». Теперь выберите: Конспект, Тест или Карточки.'))}else stOut().replaceChildren(el('pre','',a))}
-  catch(e){stOut().replaceChildren(el('p','hint','Ошибка: '+e.message))}}
-document.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>stRun(b.dataset.st));
-$('studyBtn').onclick=()=>openStudy();$('stClose').onclick=()=>$('studyDialog').close();
-$('stTopic').addEventListener('change',()=>{const t=$('stTopic').value.trim();if(ST.mat[t]!==undefined)$('stMat').value=ST.mat[t];stScoresShow(t)});
-[['stSolveC','solve',()=>takePhoto()],['stSolveG','solve',()=>pickPhoto()],['stOcrC','ocr',()=>takePhoto()],['stOcrG','ocr',()=>pickPhoto()]].forEach(([id,m,f])=>$(id).onclick=()=>{photoMode=m;f()});
+function stExam(){$('stTitle').textContent='Экзаменатор';const o=sb();o.append(el('p','muted','Экзаменатор задаёт вопросы по одному и оценивает ответы. Отвечать можно голосом.'));
+  const tp=el('input','inp');tp.placeholder='Тема экзамена';o.append(tp);
+  if(SD.courses.length){o.append(el('h3','','Или по курсу'));SD.courses.forEach(c=>o.append(ib('ghost','book',c.title,()=>{exam={topic:c.title,src:'Уровень: '+c.level+'. Предмет: '+c.subject,msgs:[]};examStep('Начинай экзамен.')})))}
+  o.append(ib('go','play','Начать',()=>{const t=tp.value.trim();if(!t)return flash('Введите тему');exam={topic:t,src:'',msgs:[]};examStep('Начинай экзамен.')}))}
+async function examStep(text){exam.msgs.push({role:'user',content:text});const o=sb();o.replaceChildren(el('p','muted','Экзаменатор думает…'));
+  if(noAI()){o.replaceChildren(el('p','muted','Сначала подключите нейросеть: значок вверху главного экрана.'));return}
+  try{const a=await ask([{role:'system',content:'Ты экзаменатор по теме «'+exam.topic+'». '+exam.src+'\nЗадавай по одному вопросу за раз, постепенно усложняя. На ответ студента кратко оцени (верно, частично или неверно), поправь ошибки и задай следующий вопрос. Через 8 вопросов подведи итог с оценкой по 5-балльной шкале и советами. Пиши по-русски.'},...exam.msgs.slice(-14)],700);exam.msgs.push({role:'assistant',content:a});renderExam(a)}
+  catch(e){exam.msgs.pop();o.replaceChildren(el('p','muted','Не получилось: '+e.message),ib('go','repeat','Повторить',()=>examStep(text)))}}
+function renderExam(a){const o=sb();o.replaceChildren();const q=el('div','stcard');q.append(md(a));o.append(q);speak(a);
+  const ta=el('textarea','inp');ta.rows=3;ta.placeholder='Ваш ответ…';
+  const row=el('div','row2'),mic=ib('ghost','mic','Голосом',()=>{stopAllSpeech();speaking=false;captureText=t=>{ta.value=(ta.value+' '+t).trim()};listen(true)}),go1=ib('go','send','Ответить',()=>{if(ta.value.trim()){stopAllSpeech();examStep(ta.value.trim())}});
+  row.append(mic,go1);o.append(ta,row,ib('ghost','check','Завершить экзамен',()=>examStep('Заверши экзамен и подведи итог.')))}
+function stStats(){$('stTitle').textContent='Статистика';const o=sb(),L=lvl();
+  const h=el('div','stcard hero');h.append(el('div','big','Уровень '+L+' · '+SD.xp+' XP'),el('div','muted','Серия дней: '+SD.streak.n+' · карточек: '+SD.deck.length+' · к повторению: '+dueCards().length+' · выучено: '+SD.deck.filter(c=>c.iv>=21).length));o.append(h,el('h3','','Курсы'));
+  if(!SD.courses.length)o.append(el('p','muted','Пока нет курсов.'));
+  SD.courses.forEach(c=>{const d=c.lessons.filter(l=>l.done).length,card=el('div','stcard');card.append(el('b','',c.title),el('div','muted',d+' из '+c.lessons.length+' уроков'));const b=el('div','bar'),i=el('i');i.style.width=100*d/c.lessons.length+'%';b.append(i);card.append(b);o.append(card)});
+  o.append(el('h3','','Последние тесты'));if(!SD.hist.length)o.append(el('p','muted','Тестов пока нет.'));
+  SD.hist.slice(-10).reverse().forEach(x=>o.append(el('div','muted',x.d+' · '+x.c+' · '+x.l+': '+x.s+'/'+x.n)))}
+async function studyPhoto(mode,url){openStudy();stNav={n:'photo'};$('stTitle').textContent=mode==='solve'?'Разбор задания':'Текст с фото';const o=sb();o.replaceChildren(el('p','muted','Смотрю на фото…'));
+  try{const a=await ask([{role:'system',content:'Ты репетитор. Отвечай по-русски.'},{role:'user',content:[{type:'text',text:mode==='solve'?'На фото учебное задание. Реши его по шагам, объясни каждый шаг и дай итоговый ответ. Если условие неразборчиво, скажи об этом.':'Перепиши весь текст с фото полностью и аккуратно, без комментариев.'},{type:'image_url',image_url:{url}}]}],2000,true);
+    o.replaceChildren();const c=el('div','stcard');c.append(md(a));o.append(c);
+    if(mode==='ocr')o.append(ib('go','spark','Составить курс из этого текста',()=>nav('new',{m:a})));
+    o.append(ib('ghost','back','В учёбу',()=>nav('home')))}
+  catch(e){o.replaceChildren(el('p','muted','Не получилось: '+e.message),ib('ghost','back','В учёбу',()=>nav('home')))}}
+function openStudy(topic,mode){$('study').hidden=false;sv();if(mode==='exam')nav('exam');else if(topic)nav('new',{t:topic});else if(stNav.n==='photo'||$('stBody').children.length===0)nav('home')}
+$('studyBtn').onclick=()=>{$('study').hidden=false;nav('home')};
+$('stBack').onclick=()=>{const n=stNav.n;if(n==='home'){$('study').hidden=true;stopAllSpeech()}else if(n==='lesson')nav('course',stNav.a.id);else nav('home')};
 $('grantBtn').onclick=()=>{if(NATIVE)Android.grantAll();else log('sys','Разрешения запрашиваются в Android-приложении.')};
+
 const PIPER_URL='https://cdn.jsdelivr.net/npm/@mintplex-labs/piper-tts-web@1.0.4/+esm',PIPER_DEFAULT='ru_RU-irina-medium';
 let piperLib=null,piperAudio=null,piperStop=false,piperFailed=false,piperErr='',convo=false,silent=0,gotSpeech=false,wCycle=0,wStream=null;
 async function piperLoad(){if(!piperLib){try{piperLib=await import(PIPER_URL)}catch(e){piperLib=null;throw new Error('не удалось загрузить библиотеку ('+(e.message||e)+')')}}return piperLib}
 function stopPiper(){piperStop=true;if(piperAudio){const a=piperAudio;piperAudio=null;try{a.pause();a.dispatchEvent(new Event('ended'))}catch{}}}
 function stopAllSpeech(){stopPiper();if(NATIVE)Android.stopSpeak();else window.speechSynthesis&&speechSynthesis.cancel()}
 function splitText(t){const raw=t.match(/[^.!?…\n]+[.!?…]*/g)||[t],out=[];let cur='';for(const x of raw){if((cur+' '+x).length>240&&cur){out.push(cur.trim());cur=x}else cur+=' '+x}if(cur.trim())out.push(cur.trim());return out.length?out:[t]}
-const playBlob=b=>new Promise((res,rej)=>{const a=new Audio(URL.createObjectURL(b));piperAudio=a;a.playbackRate=settings.voiceRate||1;a.onended=()=>{try{URL.revokeObjectURL(a.src)}catch{}res()};a.onerror=()=>rej(new Error('не удалось воспроизвести звук'));a.play().catch(rej)});
+const playBlob=b=>new Promise((res,rej)=>{const a=new Audio(URL.createObjectURL(b));piperAudio=a;a.preservesPitch=(settings.voicePitch||1)===1;a.playbackRate=(settings.voiceRate||1)*(settings.voicePitch||1);fxChain(a);a.onended=()=>{try{URL.revokeObjectURL(a.src)}catch{}res()};a.onerror=()=>rej(new Error('не удалось воспроизвести звук'));a.play().catch(rej)});
 async function piperSpeak(text,fallback){
   stopPiper();piperStop=false;speaking=true;stopRec();state('ГОВОРЮ…','ОТВЕТ · PIPER');
   const finish=()=>{speaking=false;idle();if(convo)setTimeout(()=>listen(true),300);else if(always)setTimeout(listen,250)};
@@ -293,7 +382,7 @@ $('pDownload').onclick=async()=>{const id=$('pVoice').value;if(!id)return;$('pBa
     settings.piperVoice=id;settings.voiceKind='piper';piperFailed=false;piperErr='';saveSet();$('pBar').style.width='100%';$('pHint').textContent='Готово. Голос сохранён в браузере.';sample()}
   catch(e){$('pHint').textContent='Не удалось скачать: '+(e.message||e)}};
 $('pVoice').onchange=()=>{settings.piperVoice=$('pVoice').value;saveSet()};
-function setConvo(on,passive){convo=on;silent=0;gotSpeech=false;const b=$('convoBtn');b.classList.toggle('on',on);b.textContent=on?'💬 Разговор: вкл':'💬 Разговор';
+function setConvo(on,passive){convo=on;silent=0;gotSpeech=false;const b=$('convoBtn');b.classList.toggle('on',on);b.querySelector('span').textContent=on?'Разговор: вкл':'Разговор';
   if(on){always=false;setWake();if(!passive){stopAllSpeech();speaking=false;listen(true)}}else{stopRec();idle()}}
 $('convoBtn').onclick=()=>setConvo(!convo);
 const wKey=()=>{const p=P.list.find(p=>p.key&&/groq\.com/.test(p.base));return p?p.key:null};
@@ -314,13 +403,13 @@ function recordUtterance(maxWait,my){return new Promise((resolve,reject)=>{
     if(!spoke&&t>maxWait)return stop(false)},50);
   rec.start(250)})}
 async function transcribe(blob,key){
-  const fd=new FormData();fd.append('file',blob,blob.type.includes('mp4')?'speech.m4a':'speech.webm');fd.append('model','whisper-large-v3-turbo');fd.append('language','ru');fd.append('temperature','0');fd.append('prompt','Джарвис. Команды голосовому ассистенту на русском языке.');
+  const fd=new FormData();fd.append('file',blob,blob.type.includes('mp4')?'speech.m4a':'speech.webm');fd.append('model','whisper-large-v3-turbo');fd.append('language','ru');fd.append('temperature','0');fd.append('prompt',botN()+'. Команды голосовому ассистенту на русском языке.');
   const r=await fetch('https://api.groq.com/openai/v1/audio/transcriptions',{method:'POST',headers:{Authorization:'Bearer '+key},body:fd});
   let d;try{d=await r.json()}catch{throw new Error('HTTP '+r.status)}
   if(!r.ok)throw new Error((d.error&&d.error.message)||('HTTP '+r.status));return(d.text||'').trim()}
 async function whisperListen(once){
   const my=++wCycle;listening=true;onceMode=!!once;
-  const key=wKey();if(!key){listening=false;log('sys','Для режима Whisper добавьте нейросеть Groq с ключом (чип ◉ вверху).','error');return}
+  const key=wKey();if(!key){listening=false;log('sys','Для режима Whisper добавьте нейросеть Groq с ключом (кнопка нейросети вверху).','error');return}
   if(!wStream||!wStream.active){try{wStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}})}catch(e){listening=false;return micErr('not-allowed')}}
   if(wCycle!==my)return;started();
   let blob=null;try{blob=await recordUtterance(once?8000:8000,my)}catch(e){log('sys','Ошибка записи: '+e.message,'error')}
@@ -331,6 +420,23 @@ async function whisperListen(once){
     if(t.length>1&&!(t.length<60&&/(субтитр|продолжение следует|спасибо за просмотр|подписывайтесь|корректор)/i.test(t)))gotText(t)}
   catch(e){listening=false;log('sys','Whisper: '+e.message,'error')}
   ended()}
+let fxCtx=null;
+function fxChain(a){if(!settings.voiceFx)return;
+  try{fxCtx=fxCtx||new(window.AudioContext||window.webkitAudioContext)();if(fxCtx.resume)fxCtx.resume();
+    const hp=fxCtx.createBiquadFilter();hp.type='highpass';hp.frequency.value=180;
+    const pk=fxCtx.createBiquadFilter();pk.type='peaking';pk.frequency.value=1800;pk.gain.value=6;pk.Q.value=1;
+    const ws=fxCtx.createWaveShaper(),c=new Float32Array(256);for(let i=0;i<256;i++){const x=i*2/256-1;c[i]=Math.tanh(x*2.2)}ws.curve=c;
+    const lp=fxCtx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=5200;
+    const src=fxCtx.createMediaElementSource(a);src.connect(hp);hp.connect(pk);pk.connect(ws);ws.connect(lp);lp.connect(fxCtx.destination)}catch{}}
+function applyPersona(){const h=settings.personality==='hraz',q=x=>document.querySelector(x),n=h?'Х.Р.А.З.':botN().toUpperCase();
+  q('.brand b').textContent=n;q('.brand small').textContent=h?'ПОЛИМЕРНАЯ ПЕРЧАТКА · ИИ':'ЛИЧНЫЙ ИИ-КОМПАНЬОН';
+  q('.brand-mark').textContent=n[0];q('.core-eye').textContent=n[0];document.title=h?'ХРАЗ':botN();document.body.dataset.p=h?'hraz':'';
+  $('textCommand').placeholder='Сообщение для '+(h?'ХРАЗ':botN())+'…'}
+$('vFx').onchange=()=>{settings.voiceFx=$('vFx').checked;saveSet()};
+$('vHraz').onclick=async()=>{Object.assign(settings,{personality:'hraz',voiceKind:'piper',voicePitch:.85,voiceRate:1,voiceFx:true,piperVoice:'ru_RU-denis-medium'});piperFailed=false;piperErr='';saveSet();applyPersona();
+  $('vKind').value='piper';$('vRate').value=1;$('vPitch').value=.85;$('vRateV').textContent='1.00';$('vPitchV').textContent='0.85';$('vFx').checked=true;
+  await piperUI();const sel=$('pVoice');sel.value='ru_RU-denis-medium';if(sel.value!=='ru_RU-denis-medium'&&sel.options.length)sel.selectedIndex=0;$('pDownload').click()};
+applyPersona();
 let chkWait=false;
 function saveSet(){write('jarvis_settings',settings)}
 function opt(sel,v,l,on){const o=document.createElement('option');o.value=v;o.textContent=l;if(on)o.selected=true;sel.append(o)}
@@ -340,8 +446,8 @@ function loadVoices(){
     $('vHint').textContent=list.length?'Русских голосов: '+list.length+'.':'У выбранного движка нет русских голосов. Установите русский голос в системных настройках синтеза речи (кнопка ниже).'}catch{$('vHint').textContent='Не удалось получить список голосов.'}}
   else{$('vEngLbl').style.display='none';list=(window.speechSynthesis?speechSynthesis.getVoices():[]).filter(v=>v.lang&&v.lang.startsWith('ru')).map(v=>[v.name,v.name+' ('+v.lang+')']);$('vHint').textContent=list.length?'':'В браузере нет русских голосов. На ПК попробуйте Edge.'}
   opt(sel,'','По умолчанию (системный)');list.forEach(([n,l])=>opt(sel,n,l));sel.value=settings.voiceName||''}
-function openVoice(){$('vStt').value=settings.sttKind||'';$('vKind').value=settings.voiceKind||'system';$('vRate').value=settings.voiceRate||1;$('vPitch').value=settings.voicePitch||1;$('vRateV').textContent=(+$('vRate').value).toFixed(2);$('vPitchV').textContent=(+$('vPitch').value).toFixed(2);loadVoices();piperUI();if(!$('voiceDialog').open)$('voiceDialog').showModal()}
-const sample=()=>speak('Здравствуйте. Я JARVIS, ваш ассистент. Так звучит выбранный голос.');
+function openVoice(){$('vFx').checked=!!settings.voiceFx;$('vStt').value=settings.sttKind||'';$('vKind').value=settings.voiceKind||'system';$('vRate').value=settings.voiceRate||1;$('vPitch').value=settings.voicePitch||1;$('vRateV').textContent=(+$('vRate').value).toFixed(2);$('vPitchV').textContent=(+$('vPitch').value).toFixed(2);loadVoices();piperUI();if(!$('voiceDialog').open)$('voiceDialog').showModal()}
+const sample=()=>speak('Здравствуйте. Я '+botN()+', ваш ассистент. Так звучит выбранный голос.');
 $('vVoice').onchange=()=>{settings.voiceName=$('vVoice').value;saveSet();if(NATIVE)Android.setVoice(settings.voiceName);sample()};
 $('vEngine').onchange=()=>{settings.ttsEngine=$('vEngine').value;settings.voiceName='';saveSet();if(NATIVE){Android.setVoice('');Android.setEngine(settings.ttsEngine)}$('vHint').textContent='Переключаю движок…'};
 $('vRate').oninput=()=>{settings.voiceRate=+$('vRate').value;$('vRateV').textContent=settings.voiceRate.toFixed(2);saveSet()};
@@ -351,7 +457,7 @@ $('vClose').onclick=()=>$('voiceDialog').close();$('openVoice').onclick=openVoic
 window.onNativeTtsReady=()=>{if($('voiceDialog').open)loadVoices()};
 if(window.speechSynthesis)speechSynthesis.onvoiceschanged=()=>{if($('voiceDialog').open)loadVoices()};
 if(NATIVE){Android.setVoice(settings.voiceName||'');if(settings.ttsEngine)Android.setEngine(settings.ttsEngine)}
-function chkLine(id,ic,t,d){let r=document.getElementById('chk_'+id);if(!r){r=el('div','chkrow');r.id='chk_'+id;$('chkList').append(r)}r.replaceChildren(el('b','',ic+' '+t),el('small','',d||''))}
+function chkLine(id,ic2,t,d){let r=document.getElementById('chk_'+id);if(!r){r=el('div','chkrow');r.id='chk_'+id;$('chkList').append(r)}const M={'✅':'ok','❌':'bad','⚠️':'warn','⏳':'wait'},b=el('b');b.append(el('span','dot '+(M[ic2]||'')),document.createTextNode(' '+t));r.replaceChildren(b,el('small','',d||''))}
 async function runCheck(){
   $('chkList').replaceChildren();
   chkLine('p','ℹ️','Платформа',NATIVE?'Android-приложение':'Браузер');
@@ -363,10 +469,10 @@ async function runCheck(){
   if(NATIVE&&info){chkLine('tts',info.tts?'✅':'❌','Синтез речи',info.tts?'Движок: '+(info.engine||'по умолчанию'):'Не запущен. Проверьте Настройки Android → Синтез речи.');chkLine('ru',info.ru>0?'✅':'⚠️','Русский голос',info.ru>0?'Найдено голосов: '+info.ru+'.':'У этого движка нет русского голоса. Загрузите его в приложении движка (для RHVoice: вкладка языков, Русский).')}
   else{const n=window.speechSynthesis?speechSynthesis.getVoices().filter(v=>v.lang&&v.lang.startsWith('ru')).length:0;chkLine('tts',window.speechSynthesis?'✅':'❌','Синтез речи',window.speechSynthesis?'Доступен.':'Не поддерживается.');chkLine('ru',n?'✅':'⚠️','Русский голос',n?'Найдено голосов: '+n+'.':'Русских голосов нет. На ПК попробуйте Edge.')}
   try{const ac=new AbortController();setTimeout(()=>ac.abort(),6000);await fetch('https://www.gstatic.com/generate_204',{mode:'no-cors',signal:ac.signal,cache:'no-store'});chkLine('net','✅','Интернет','Соединение есть.')}catch{chkLine('net','❌','Интернет','Нет соединения. Распознавание речи и нейросети требуют интернета.')}
-  if(settings.sttKind==='whisper'){const k=wKey();chkLine('stt',k?'✅':'❌','Whisper (Groq)',k?'Ключ Groq найден. Слух идёт через запись и Whisper.':'Не найден ключ Groq: добавьте нейросеть Groq (чип ◉ вверху).')}
+  if(settings.sttKind==='whisper'){const k=wKey();chkLine('stt',k?'✅':'❌','Whisper (Groq)',k?'Ключ Groq найден. Слух идёт через запись и Whisper.':'Не найден ключ Groq: добавьте нейросеть Groq (кнопка нейросети вверху).')}
   if(settings.voiceKind==='piper'){chkLine('piper','⏳','Нейроголос Piper','Проверяю…');try{const lib=await piperLoad(),st=await lib.stored(),ok=st.includes(settings.piperVoice);chkLine('piper',ok?'✅':'⚠️','Нейроголос Piper',ok?'Голос скачан: '+settings.piperVoice+(piperErr?'. Последняя ошибка: '+piperErr:''):'Голос ещё не скачан: Голос и озвучка, затем «Скачать и включить голос».')}catch(e){chkLine('piper','❌','Нейроголос Piper','Не загрузился: '+String(e.message||e).slice(0,140)+'. При первом запуске нужен интернет.')}}
   const ps=P.list.filter(p=>p.key);
-  if(!ps.length)chkLine('ai','⚠️','Нейросеть','Не добавлена. Нажмите чип ◉ вверху и добавьте ключ.');
+  if(!ps.length)chkLine('ai','⚠️','Нейросеть','Не добавлена. Нажмите кнопка нейросети вверху и добавьте ключ.');
   for(const p of ps){chkLine('ai'+p.id,'⏳',p.name,'Проверяю…');try{const a=await callP(p,[{role:'user',content:'Ответь одним словом: ок'}],40);chkLine('ai'+p.id,'✅',p.name,'Ответила: '+a.slice(0,40))}catch(e){chkLine('ai'+p.id,'❌',p.name,String(e.message).slice(0,160))}}}
 function openCheck(){if(!$('checkDialog').open)$('checkDialog').showModal();runCheck()}
 $('chkRun').onclick=runCheck;$('checkBtn').onclick=$('openCheck').onclick=openCheck;$('cClose').onclick=()=>$('checkDialog').close();
