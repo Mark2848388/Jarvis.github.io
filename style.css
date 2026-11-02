@@ -84,10 +84,3 @@ input[type=checkbox]{accent-color:var(--a2);width:18px;height:18px}input[type=ra
 .row2{display:flex;gap:8px;margin:10px 0}.row2>*{flex:1}
 .go,.ghost{display:inline-flex;gap:8px;align-items:center;justify-content:center;border-radius:14px;padding:12px 16px;font-weight:600}.go{background:var(--grad);color:#fff}.ghost{background:var(--card);border:1px solid var(--line)}.go:disabled{opacity:.5}
 .flashmsg{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--card2);border:1px solid var(--line);padding:10px 16px;border-radius:14px;z-index:40;max-width:88%;text-align:center}
-/* Vektor violet glass refresh */
-:root{--bg:#080611;--card:rgba(22,15,39,.94);--card2:#211433;--line:#38224f;--text:#f8f2ff;--muted:#b0a0c8;--a1:#c46cff;--a2:#f04bdf;--a3:#7b5cff;--grad:linear-gradient(115deg,#a742ff 0%,#d75dff 45%,#ff5ac8 100%);--glow:rgba(177,70,255,.32)}
-body{background:radial-gradient(80% 42% at 50% 10%,rgba(126,48,225,.22),transparent 75%),radial-gradient(70% 35% at 100% 100%,rgba(241,67,202,.13),transparent 70%),var(--bg)}
-.core{width:142px;height:142px;background:conic-gradient(from 20deg,#7b4dff,#e34cff,#ff62c6,#783eff,#7b4dff);box-shadow:0 0 25px rgba(145,61,255,.5),0 0 70px rgba(209,57,244,.22),inset 0 0 16px rgba(255,255,255,.6)}
-.core-inner{width:124px;height:124px;background:radial-gradient(circle at 30% 25%,#32205b,#0b0718 72%);border:1px solid rgba(255,255,255,.2)}
-.core-eye{font-size:42px}.core-caption{letter-spacing:.16em}.box{backdrop-filter:blur(18px);background:rgba(23,15,39,.88);border-color:rgba(197,128,255,.2)}.chip,.icon-btn,.msg.jarvis .bubble{border-color:rgba(197,128,255,.18)}
-.routine-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px;margin:7px 0;border:1px solid var(--line);border-radius:14px;background:var(--card2)}.routine-row b,.routine-row small{display:block}.routine-row small{font-size:11px;color:var(--muted);margin-top:3px}.rchecks{display:grid;gap:5px;padding:10px;border:1px solid var(--line);border-radius:14px;background:rgba(8,6,17,.35)}.rchecks .check{font-size:13px!important}

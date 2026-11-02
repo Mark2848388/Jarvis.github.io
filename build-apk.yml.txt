@@ -1,11 +1,8 @@
-name: Build Vektor APK
+name: Build APK
 on:
-  workflow_dispatch:
   push:
     branches: [main]
-permissions:
-  contents: read
-  actions: read
+  workflow_dispatch:
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -18,20 +15,16 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - name: Prepare Android project
+      - name: Prepare project
         run: |
           unzip -q -o android.zip -d android
           mkdir -p android/app/src/main/assets/www
-          cp index.html app.js style.css manifest.json icon-192.png icon-512.png android/app/src/main/assets/www/
-          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
-            mkdir -p android/app/src/main/res/mipmap-$d
-            cp icon-192.png android/app/src/main/res/mipmap-$d/ic_launcher.png
-          done
-      - name: Build debug APK
+          cp index.html app.js ext.js style.css theme.css manifest.json icon-192.png icon-512.png android/app/src/main/assets/www/
+          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do mkdir -p android/app/src/main/res/mipmap-$d; cp icon-192.png android/app/src/main/res/mipmap-$d/ic_launcher.png; done
+      - name: Build
         working-directory: android
         run: gradle assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
-          name: Vektor-debug-APK
+          name: Vektor-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
