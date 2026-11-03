@@ -19,7 +19,7 @@ jobs:
         run: |
           unzip -q -o android.zip -d android
           mkdir -p android/app/src/main/assets/www
-          cp index.html app.js ext.js style.css theme.css manifest.json icon-192.png icon-512.png android/app/src/main/assets/www/
+          cp index.html app.js ext.js study2.js vktr.js style.css theme.css manifest.json icon-192.png icon-512.png android/app/src/main/assets/www/
           for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do mkdir -p android/app/src/main/res/mipmap-$d; cp icon-192.png android/app/src/main/res/mipmap-$d/ic_launcher.png; done
       - name: Build
         working-directory: android

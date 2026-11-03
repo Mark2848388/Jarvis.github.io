@@ -149,8 +149,10 @@ function fileCard(){
   const size=ps.reduce((n,p)=>n+PF[p].code.length,0),c=el('div','filecard'),i=el('div','fi'),b=el('button',null,'Скачать ZIP');
   i.append(el('b',null,(PFname||'vektor-project')+'.zip'),el('small',null,plural(ps.length,['файл','файла','файлов'])+' · '+fmtKB(size)));
   b.type='button';b.onclick=()=>zipProject(true);c.append(i,b);
-  const w=el('div');w.append(c);const ul=el('ul','filelist');ps.forEach(p=>ul.append(el('li',null,p)));w.append(ul);return w}
-function attachCard(){const bs=document.querySelectorAll('.msg.jarvis .bubble'),b=bs[bs.length-1],c=fileCard();if(b&&c){b.append(c);toBottom()}}
+  const w=el('div');w.append(c);const ul=el('ul','filelist');ps.forEach(p=>{const li=el('li',null,p);li.style.cursor='pointer';li.onclick=()=>{const nx=li.nextElementSibling;if(nx&&nx.classList.contains('cblk')){nx.remove();return}li.after(mkCode({path:p,lang:PF[p].lang,code:PF[p].code}))};ul.append(li)});w.append(ul);return w}
+function attachCard(){const bs=document.querySelectorAll('.msg.jarvis .bubble'),b=bs[bs.length-1],c=fileCard();if(b&&c){b.append(c);
+  if(settings.codeMode){const ch=el('div','chips2');ch.style.marginTop='10px';for(const t of['Добавь тесты','Улучши дизайн и UX','Найди баги и уязвимости','Объясни, как это работает']){const k=el('button','chip',t);k.type='button';k.onclick=()=>handleCommand(t);ch.append(k)}b.append(ch)}
+  toBottom()}}
 async function zipProject(quiet){
   const ps=Object.keys(PF);
   if(!ps.length){if(!quiet)say('Пока нечего паковать. Попросите, например: «Сделай приложение-калькулятор и запакуй в zip».');return false}
@@ -162,14 +164,25 @@ async function zipProject(quiet){
   return true}
 
 /* ---------- Режим «Код» ---------- */
-const CODE_SYS=`Ты Вектор Код — старший инженер-разработчик. Пишешь рабочий, профессиональный, законченный код. Никаких заглушек и сокращений («...», «остальное без изменений», TODO вместо реализации).
-Формат ответа, когда нужен код:
+const CODE_SYS=`Ты VKTR Code — старший инженер-программист уровня Claude Code. Работаешь как опытный разработчик в команде: сначала понимаешь задачу, потом проектируешь, потом пишешь код, который можно сразу запустить.
+
+ПРИНЦИПЫ
+- Полнота: никаких заглушек и сокращений («...», «остальное без изменений», TODO вместо реализации). Каждый файл — целиком.
+- Корректность: продумай граничные случаи, ошибки ввода-вывода, пустые данные. Не выдумывай несуществующие API и функции библиотек; если не уверен, используй стандартную библиотеку.
+- Согласованность: имена функций, id элементов, импорты, пути и типы совпадают между файлами. Перед ответом мысленно «запусти» код и проверь.
+- Качество: чистая структура, понятные имена, комментарии только там, где логика неочевидна. Современный стабильный синтаксис, без устаревших API.
+- Безопасность: валидация входа, никаких секретов в коде, защита от инъекций и XSS.
+- Интерфейсы: адаптивные, доступные (метки, контраст, фокус), аккуратный современный дизайн.
+- Тесты: для нетривиальной логики добавляй тесты и команду запуска.
+- Правки: если проект уже есть (см. файлы ниже), меняй минимально необходимое и выдавай изменённые файлы ЦЕЛИКОМ, сохраняя стиль проекта.
+
+ФОРМАТ ОТВЕТА, когда нужен код
 1) Первой строкой: PROJECT: короткое-имя-латиницей (только для нового проекта).
-2) 2–4 строки плана на русском.
-3) Каждый файл отдельным блоком, заголовок СТРОГО такой: три обратных кавычки, язык, пробел, path=относительный/путь/файла.ext, затем код и закрывающие три обратные кавычки. Пути без начального слэша.
-4) Для приложения создай ВСЕ файлы, нужные для запуска (включая README.md и файл зависимостей, если они нужны). В README.md не используй вложенные блоки кода, команды оформляй отступом в 4 пробела.
-5) В конце — раздел «Как запустить» на 2–5 строк.
-Если правишь существующий проект, выдавай изменённые файлы ЦЕЛИКОМ, пути как в проекте. Продумай обработку ошибок и граничные случаи, согласованность имён между файлами (id элементов, функции, импорты, пути). Не требуй платных сервисов и ключей без необходимости. Если вопрос не про создание кода, отвечай кратко и по делу. Таблицы и списки оформляй в markdown.`;
+2) Раздел «План»: 3–6 коротких пунктов (что и в каких файлах делаем, ключевые решения).
+3) Каждый файл отдельным блоком. Заголовок СТРОГО: три обратных кавычки, язык, пробел, path=относительный/путь/файла.ext, затем код и закрывающие три обратные кавычки. Пути без начального слэша.
+4) Для приложения создай ВСЕ файлы, нужные для запуска (README.md, файл зависимостей, конфигурацию). В README.md не используй вложенные блоки кода, команды оформляй отступом в 4 пробела.
+5) В конце раздел «Как запустить» на 2–5 строк.
+Если вопрос не про создание кода (объяснить, найти ошибку, сравнить подходы), отвечай кратко и по делу, с примерами. Таблицы и списки оформляй в markdown. Пиши по-русски; код и идентификаторы на английском.`;
 const REVIEW_SYS=`Ты строгий ревьюер кода. Проверь файлы: синтаксис, логические ошибки, обработку ошибок, несостыковки между файлами (имена функций, id элементов, импорты, пути), неполный код, очевидные проблемы безопасности.
 Если проблем нет — ответь ровно одним словом: OK.
 Если проблемы есть — сначала строка «ПРОБЛЕМЫ:» и до 5 коротких пунктов, затем ПОЛНЫЕ исправленные версии только изменённых файлов в том же формате блоков (три обратные кавычки, язык, path=путь, код, три обратные кавычки). Ничего не сокращай.`;
@@ -182,19 +195,29 @@ function projectCtx(){
 async function review(files,issues){
   const body=Object.values(files).map(f=>'```'+(f.lang||'')+' path='+f.path+'\n'+f.code+'\n```').join('\n');
   return ask([{role:'system',content:REVIEW_SYS},{role:'user',content:(issues.length?'Автоматическая проверка нашла:\n'+issues.map(i=>'- '+i.path+': '+i.msg).join('\n')+'\n\n':'')+'Файлы:\n'+body}],8000)}
+
+function withAtt(text,att){
+  if(!att||!att.length)return{content:text,vision:false};
+  let ctx='';const imgs=[];
+  for(const a of att){if(a.kind==='image')imgs.push(a.dataUrl);else if(a.ctx)ctx+=a.ctx+'\n\n'}
+  const body=(ctx?'Вложения пользователя:\n'+ctx+'Запрос пользователя: ':'')+text;
+  return imgs.length?{content:[{type:'text',text:body},...imgs.map(u=>({type:'image_url',image_url:{url:u}}))],vision:true}:{content:body,vision:false}}
+function adoptFiles(att){
+  const got=[];for(const a of att||[]){if(a.files)for(const f of a.files)got.push({path:normPath(f.path),lang:'',code:f.text});else if(a.kind==='text'&&a.text!=null)got.push({path:normPath(a.name),lang:'',code:a.text})}
+  if(got.length)mergePF(got);return got.length}
 async function codeAI(text,opt){
   opt=opt||{};
   if(!P.list.some(p=>p.key)){say('Подключите нейросеть: нажмите на кнопку ИИ вверху и добавьте ключ.');return}
   if(busy){flash('Подождите, предыдущий запрос ещё выполняется');return}
-  busy=true;const pr=progress('Пишу код…');state('ПИШУ КОД…','РАБОТА');
+  busy=true;const att=window.VKATT?VKATT.take():[];adoptFiles(att);const wa=withAtt(text,att.filter(a=>!a.files&&a.kind!=='text'));const pr=progress(att.length?'Изучаю вложения…':'Пишу код…');state('ПИШУ КОД…','РАБОТА');
   try{
     const hist=chat.slice(-4).map(m=>({role:m.role,content:compact(m.content)}));
-    let ans=await ask([{role:'system',content:CODE_SYS+projectCtx()},...hist,{role:'user',content:text}],8000);
+    let ans=await ask([{role:'system',content:CODE_SYS+projectCtx()},...hist,{role:'user',content:wa.content}],8000,wa.vision);
     const pn=ans.match(/^\s*PROJECT\s*:\s*([\w .-]+)/im);if(pn&&(!Object.keys(PF).length||!PFname))PFname=slug(pn[1])||PFname;
     ans=ans.replace(/^\s*PROJECT\s*:.*\n?/im,'').trim();
     const got=extractFiles(ans,true);
     if(!got.length){pr.done();chat.push({role:'user',content:text},{role:'assistant',content:ans});chat=chat.slice(-12);write('jarvis_chat',chat);say(ans);return}
-    const work={};got.forEach(f=>{work[f.path]=f});mergePF(got);
+    const before=new Set(Object.keys(PF)),work={};got.forEach(f=>{work[f.path]=f});mergePF(got);
     const fixed=new Set();let probs='',remaining=[],rounds=0;
     while(rounds<2){
       rounds++;pr.set(rounds===1?'Проверяю код…':'Повторная проверка…');state('ПРОВЕРЯЮ КОД…','ПРОВЕРКА');
@@ -208,7 +231,7 @@ async function codeAI(text,opt){
       remaining=staticCheck(PF,Object.keys(work));if(!remaining.length)break}
     let shown=ans;
     if(fixed.size){shown=ans.replace(new RegExp(FENCE.source,'g'),(a,x,i,c)=>{const f=parseFence(i,c);return f.path&&fixed.has(f.path)?'```'+(work[f.path].lang||'')+' path='+f.path+'\n'+work[f.path].code+'\n```':a})}
-    let sum='\n\n**Проверка кода.** ';
+    let sum='\n\n| Файл | Статус | Строк |\n|---|---|---|\n'+Object.keys(work).map(p=>'| '+p+' | '+(before.has(p)?'изменён':'создан')+' | '+PF[p].code.split('\n').length+' |').join('\n')+'\n\n**Проверка кода.** ';
     if(fixed.size)sum+='Нашёл и исправил: '+[...fixed].join(', ')+'.'+(probs?'\n'+probs:'');
     else sum+='Автоматическая проверка и ревью пройдены, замечаний нет.';
     if(remaining.length)sum+='\nОстались замечания: '+remaining.map(i=>i.path+' — '+i.msg).join('; ')+'.';
@@ -227,29 +250,35 @@ ai=async function(text){
   if(!P.list.some(p=>p.key)){say('Подключите нейросеть: нажмите на кнопку ИИ вверху и добавьте API-ключ.');return}
   state('ДУМАЮ…','ОБРАБОТКА ЗАПРОСА');
   const sys=`Ты ${settings.personality==='hraz'?'ХРАЗ':botN()} — голосовой ассистент на телефоне. Отвечай по-русски ${STYLE[settings.personality]||STYLE.formal}. На обычные вопросы отвечай коротко, 1–3 предложения, простым текстом без символов разметки. Если просят таблицу, сравнение, список, инструкцию или код — оформляй markdown: таблицы через |, списки, **выделение**, блоки кода. Обращайся к пользователю: «${settings.ownerName||'сэр'}». Сейчас ${new Date().toLocaleString('ru-RU')}. Заметки пользователя: ${notes.join('; ')||'нет'}.`;
-  chat.push({role:'user',content:text});chat=chat.slice(-12);
-  try{const a=await ask([{role:'system',content:sys},...chat],1500);chat.push({role:'assistant',content:a});write('jarvis_chat',chat);const fs=extractFiles(a);if(fs.length)mergePF(fs);say(a)}
+  const att=window.VKATT?VKATT.take():[],wa=withAtt(text,att),ctxTxt=att.filter(a=>a.kind!=='image').map(a=>a.ctx||'').join('\n').slice(0,9000);
+  chat.push({role:'user',content:att.length?text+'\n[вложения: '+att.map(a=>a.name).join(', ')+']'+(ctxTxt?'\n'+ctxTxt:''):text});chat=chat.slice(-12);
+  try{const a=await ask([{role:'system',content:sys},...chat.slice(0,-1),{role:'user',content:wa.content}],att.length?3000:1500,wa.vision);chat.push({role:'assistant',content:a});write('jarvis_chat',chat);const fs=extractFiles(a);if(fs.length)mergePF(fs);say(a)}
   catch(e){chat.pop();say('Не удалось связаться с ИИ: '+e.message)}};
 
 /* ---------- маршрутизация команд ---------- */
 const PACK=/(запакуй|упакуй|запаковать|упаковать|заархивируй|архивируй)/,ZIPW=/(zip|зип|архив)/,BUILD=/(сделай|создай|напиши|построй|разработай|сгенерируй|собери)\s/,SOFT=/(приложени|сайт|игр[уаы]|скрипт|программ|бот[аы]?\b|калькулятор|страниц|проект|код\b|апк|api|интерфейс|лендинг)/;
-function setCode(on,silent){settings.codeMode=!!on;write('jarvis_settings',settings);document.body.classList.toggle('codemode',!!on);const c=$('codeChip');if(c)c.classList.toggle('on',!!on);refreshDrawer();if(!silent)say(on?'Режим «Код» включён. Опишите, что нужно создать. Я напишу, проверю и могу запаковать в ZIP.':'Режим «Код» выключен.')}
+function setCode(on,silent,fresh){
+  on=!!on;if(on===!!settings.codeMode&&!fresh)return;
+  saveCurrent();
+  if(on!==!!settings.codeMode){settings.codeMode=on;write('jarvis_settings',settings)}
+  const m=on?'code':'chat',lastId=read('vk_cur_'+m,''),ses=!fresh&&SS.find(x=>x.id===lastId&&(x.mode||'chat')===m);
+  if(ses){curId=ses.id;loadState(ses.history,ses.chat,ses.files,ses.fname)}else{curId=uid();loadState([],[],{},'')}
+  write('vk_cur_'+m,curId);applyMode();refreshDrawer();if(!silent)flash(on?'VKTR Code: отдельные чаты для программирования':'Обычный чат')}
 const _hc=handleCommand;
 handleCommand=function(raw){
   const c=String(raw||'').trim();if(!c)return;
   const s=c.toLowerCase().replace(/[!?.,;:]/g,' ').replace(/\s+/g,' ').trim();
   const user=()=>{log('user',c,'user');$('textCommand').value='';autosize()};
-  if(/^(включи |открой )?режим (кода|код|программирования|программиста)$/.test(s)){user();return setCode(true)}
-  if(/^((выключи|отключи) режим (кода|код|программирования|программиста)|обычный режим)$/.test(s)){user();return setCode(false)}
+  if(/^(включи |открой )?((режим|раздел) (кода|код|программирования|программиста)|vktr code|вектор код)$/.test(s)){$('textCommand').value='';autosize();return setCode(true)}
+  if(/^((выключи|отключи|закрой) (режим|раздел) (кода|код|программирования|программиста)|обычный (режим|чат))$/.test(s)){$('textCommand').value='';autosize();return setCode(false)}
   const wantPack=PACK.test(s)||(ZIPW.test(s)&&/(скачать|скачай|дай|собери|сделай|создай|отправь|выгрузи)/.test(s));
   if(wantPack){
-    user();
     const packOnly=/^(и )?(запакуй|упакуй|заархивируй|архивируй)/.test(s)||/^(сделай|создай|собери|дай|скачай)( мне)? (zip|зип|архив)/.test(s)||(!BUILD.test(s)&&Object.keys(PF).length>0);
-    if(packOnly)return zipProject();
-    if(BUILD.test(s))return codeAI(c,{autoZip:true});
-    return zipProject()}
+    if(packOnly){user();return zipProject()}
+    if(BUILD.test(s)){if(!settings.codeMode)setCode(true,true,true);user();return codeAI(c,{autoZip:true})}
+    user();return zipProject()}
   if(settings.codeMode&&!/^(стоп|хватит)$/.test(s)){user();return codeAI(c)}
-  if(BUILD.test(s)&&SOFT.test(s)){user();return codeAI(c)}
+  if(BUILD.test(s)&&SOFT.test(s)){setCode(true,true,true);user();return codeAI(c)}
   return _hc(raw)};
 
 /* ---------- диктовка (голос → текст в поле ввода) ---------- */
@@ -262,55 +291,83 @@ function dictToggle(){
   else{clearInterval(dictT);captureText=null;$('textCommand').placeholder='Сообщение…';if(listening){stopRec();ended()}}}
 {const _me=micErr;micErr=function(e){if(dictOn&&/not-allowed/.test(String(e)))dictToggle();return _me(e)};window.onNativeSpeechError=micErr}
 
-/* ---------- чаты и шторка ---------- */
-let SS=read('vk_sessions',[]),curId=read('vk_cur','')||('c'+Date.now());
+/* ---------- чаты (обычные и кодовые) и шторка ---------- */
+const mode=()=>settings.codeMode?'code':'chat';
+let SS=read('vk_sessions',[]),curId=read('vk_cur_'+(settings.codeMode?'code':'chat'),'')||read('vk_cur','')||('c'+Date.now());
 const uid=()=>'c'+Date.now()+Math.floor(Math.random()*1000);
-function titleOf(){const u=history.find(x=>x.who==='user')||chat.find(x=>x.role==='user');const t=u?(u.msg||u.content||''):'';return t.replace(/\s+/g,' ').trim().slice(0,44)||'Новый чат'}
+function titleOf(){const u=history.find(x=>x.who==='user')||chat.find(x=>x.role==='user');const t=u?(u.msg||u.content||''):'';return t.replace(/\s+/g,' ').trim().slice(0,44)||(settings.codeMode?'Новый код-чат':'Новый чат')}
+function snap(){return{id:curId,mode:mode(),title:titleOf(),ts:Date.now(),history:history.slice(-60),chat:chat.slice(-12),files:PF,fname:PFname}}
 function saveCurrent(){
   const has=history.some(x=>x.who==='user')||chat.length;
-  SS=SS.filter(s=>s.id!==curId);
-  if(has)SS.unshift({id:curId,title:titleOf(),ts:Date.now(),history:history.slice(-60),chat:chat.slice(-12),files:PF,fname:PFname});
-  SS=SS.slice(0,30);try{write('vk_sessions',SS)}catch{SS=SS.slice(0,10);write('vk_sessions',SS)}write('vk_cur',curId)}
-function loadState(h,c,f,n){history=h||[];chat=c||[];PF=f||{};PFname=n||'';write('jarvis_history',history);write('jarvis_chat',chat);savePF();$('log').replaceChildren();for(const x of history.slice(-40))row(x.who,x.msg,x.who==='user'?'user':x.type);toBottom()}
-function newChat(){saveCurrent();curId=uid();write('vk_cur',curId);loadState([],[],{},'');closeDrawer();refreshDrawer()}
-function openChat(id){if(id===curId){closeDrawer();return}saveCurrent();const s=SS.find(x=>x.id===id);if(!s)return;curId=id;write('vk_cur',curId);loadState(s.history,s.chat,s.files,s.fname);closeDrawer()}
-function delChat(id){SS=SS.filter(s=>s.id!==id);write('vk_sessions',SS);if(id===curId){curId=uid();write('vk_cur',curId);loadState([],[],{},'')}refreshDrawer()}
+  SS=SS.filter(s=>s.id!==curId);if(has)SS.unshift(snap());
+  SS=SS.slice(0,40);try{write('vk_sessions',SS)}catch{SS=SS.slice(0,12);write('vk_sessions',SS)}write('vk_cur_'+mode(),curId)}
+function loadState(h,c,f,n){history=h||[];chat=c||[];PF=f||{};PFname=n||'';write('jarvis_history',history);write('jarvis_chat',chat);savePF();$('log').replaceChildren();for(const x of history.slice(-40))row(x.who,x.msg,x.who==='user'?'user':x.type);codeWelcome();toBottom()}
+function newChat(){saveCurrent();curId=uid();write('vk_cur_'+mode(),curId);loadState([],[],{},'');closeDrawer();refreshDrawer()}
+function applyMode(){document.body.classList.toggle('codemode',!!settings.codeMode);const c=$('codeChip');if(c)c.classList.toggle('on',!!settings.codeMode);$('textCommand').placeholder=settings.codeMode?'Опишите, что написать или исправить…':'Сообщение для '+botN()+'…'}
+function openChat(id){
+  if(id===curId){closeDrawer();return}
+  saveCurrent();const s=SS.find(x=>x.id===id);if(!s)return;
+  const m=s.mode||'chat';if(m!==mode()){settings.codeMode=m==='code';write('jarvis_settings',settings);applyMode()}
+  curId=id;write('vk_cur_'+m,id);loadState(s.history,s.chat,s.files,s.fname);closeDrawer()}
+function delChat(id){SS=SS.filter(s=>s.id!==id);write('vk_sessions',SS);if(id===curId){curId=uid();write('vk_cur_'+mode(),curId);loadState([],[],{},'')}refreshDrawer()}
+function codeWelcome(){
+  if(!settings.codeMode||history.length||$('log').querySelector('.cwel'))return;
+  const w=el('div','cwel');w.append(el('b',null,'VKTR Code'),el('p',null,'Здесь отдельные чаты только для программирования. Опишите задачу: я напишу файлы, проверю их и могу упаковать в ZIP.'));
+  const ch=el('div','chips2');for(const t of['Сделай калькулятор на HTML и запакуй в zip','Напиши Telegram-бота на Python','Сделай сайт-визитку и запакуй в zip','Напиши скрипт, который переименует файлы в папке']){const c=el('button','chip',t);c.type='button';c.onclick=()=>handleCommand(t);ch.append(c)}
+  w.append(ch);$('log').append(w);toBottom()}
 
-const SVG={menu:'<path d="M4 7h16M4 12h16M4 17h10"/>',code:'<path d="M8 8l-5 4 5 4M16 8l5 4-5 4M14 5l-4 14"/>',zip:'<path d="M5 3h9l5 5v13H5z"/><path d="M13 3v6h6M10 12h2M10 15h2M10 18h2"/>',dict:'<rect x="9" y="3" width="6" height="10" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M4 20h6M14 20h6"/>',msg:'<path d="M4 5h16v11H9l-5 4z"/>',sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"/>'};
+/* ---------- кнопки под ответом: копировать, поделиться, сохранить ---------- */
+async function shareText(t){
+  if(NATIVE&&window.Android&&Android.shareText){Android.shareText(t);return}
+  if(navigator.share){try{await navigator.share({text:t})}catch{}return}
+  copyText(t,{textContent:''});flash('Скопировано. Вставьте в нужное приложение')}
+function actions(msg,userOnly){
+  const bar=el('div','acts'+(userOnly?' u':''));
+  const mk=(icon,label,fn)=>{const b=el('button');b.type='button';b.title=label;b.setAttribute('aria-label',label);b.insertAdjacentHTML('afterbegin',ic(icon));b.onclick=()=>fn(b);return b};
+  bar.append(
+    mk('copy','Копировать',b=>{copyText(msg,{textContent:''});b.replaceChildren();b.insertAdjacentHTML('afterbegin',ic('check'));setTimeout(()=>{b.replaceChildren();b.insertAdjacentHTML('afterbegin',ic('copy'))},1300)}),
+    ...(userOnly?[]:[mk('share','Поделиться',()=>shareText(msg))]),
+    ...(userOnly?[]:[mk('download','Сохранить в файл',()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');deliver(new Blob([msg],{type:'text/markdown'}),'vektor-'+d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes())+'.md')})]));
+  return bar}
+{const _row=row;row=function(who,msg,type){
+  const w=$('log').querySelector('.cwel');if(w)w.remove();
+  _row(who,msg,type);
+  if(who==='jarvis'||who==='user'){const r=$('log').lastElementChild,b=r&&r.querySelector('.bubble');if(r&&b&&!b.parentElement.classList.contains('col')){const col=el('div','col');b.replaceWith(col);col.append(b,actions(String(msg),who==='user'))}}}}
+
+const SVG={menu:'<path d="M4 7h16M4 12h16M4 17h10"/>',code:'<path d="M8 8l-5 4 5 4M16 8l5 4-5 4M14 5l-4 14"/>',zip:'<path d="M5 3h9l5 5v13H5z"/><path d="M13 3v6h6M10 12h2M10 15h2M10 18h2"/>',dict:'<rect x="9" y="3" width="6" height="10" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M4 20h6M14 20h6"/>',msg:'<path d="M4 5h16v11H9l-5 4z"/>',copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',share:'<circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/>',sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"/>'};
 {const sp=document.querySelector('svg[style*="display:none"]');if(sp)sp.insertAdjacentHTML('beforeend',Object.entries(SVG).map(([k,v])=>'<symbol id="i-'+k+'" viewBox="0 0 24 24">'+v+'</symbol>').join(''))}
 const scrim=el('div');scrim.id='scrim';const dr=el('aside');dr.id='drawer';document.body.append(scrim,dr);
 function openDrawer(){refreshDrawer();dr.classList.add('on');scrim.classList.add('on')}
 function closeDrawer(){dr.classList.remove('on');scrim.classList.remove('on')}
 scrim.onclick=closeDrawer;
-let dq='';
+let dq='',dm='all';
 function item(icon,text,fn,extra){const b=el('button','dr-item');b.type='button';b.insertAdjacentHTML('afterbegin',ic(icon));b.append(el('span','t',text));if(extra)b.append(extra);b.onclick=()=>{closeDrawer();setTimeout(fn,120)};return b}
 function refreshDrawer(){
   if(!dr.isConnected)return;
-  dr.replaceChildren();
+  dr.replaceChildren();const isCode=!!settings.codeMode;
   const top=el('div','dr-top'),mk=el('span','brand-mark',(botN()[0]||'В')),nm=el('b',null,botN().toUpperCase());top.append(mk,nm);
-  const nw=el('button','dr-new');nw.type='button';nw.insertAdjacentHTML('afterbegin',ic('plus'));nw.append(el('span',null,'Новый чат'));nw.onclick=newChat;
+  const nw=el('button','dr-new');nw.type='button';nw.insertAdjacentHTML('afterbegin',ic('plus'));nw.append(el('span',null,isCode?'Новый код-чат':'Новый чат'));nw.onclick=newChat;
+  const seg=el('div','seg');for(const[k,t]of[['all','Все'],['chat','Чаты'],['code','Code']]){const b=el('button',dm===k?'on':'',t);b.type='button';b.onclick=()=>{dm=k;refreshDrawer()};seg.append(b)}
   const q=el('input','dr-search');q.placeholder='Поиск по чатам';q.value=dq;q.oninput=()=>{dq=q.value;const pos=q.selectionStart;refreshDrawer();const n=dr.querySelector('.dr-search');n.focus();n.setSelectionRange(pos,pos)};
   const sc=el('div','dr-scroll');
-  sc.append(el('div','dr-h','ЧАТЫ'));
-  saveCurrentSilently();
-  const list=SS.filter(s=>!dq||(s.title+' '+(s.history||[]).map(x=>x.msg).join(' ')).toLowerCase().includes(dq.toLowerCase()));
+  sc.append(el('div','dr-h',dm==='code'?'КОД-ЧАТЫ':dm==='chat'?'ЧАТЫ':'ВСЕ ЧАТЫ'));
+  const has=history.some(x=>x.who==='user')||chat.length;SS=SS.filter(s=>s.id!==curId);if(has)SS.unshift(snap());
+  const list=SS.filter(s=>(dm==='all'||(s.mode||'chat')===dm)&&(!dq||(s.title+' '+(s.history||[]).map(x=>x.msg).join(' ')).toLowerCase().includes(dq.toLowerCase())));
   if(!list.length)sc.append(el('div','hint',dq?'Ничего не найдено':'Пока нет сохранённых чатов'));
-  for(const s of list){const b=el('div','dr-item'+(s.id===curId?' act':''));b.insertAdjacentHTML('afterbegin',ic('msg'));const t=el('span','t',s.title);const x=el('button','x');x.type='button';x.insertAdjacentHTML('afterbegin',ic('trash'));x.onclick=e=>{e.stopPropagation();delChat(s.id)};b.append(t,x);b.onclick=()=>openChat(s.id);sc.append(b)}
+  for(const s of list){const cm=(s.mode||'chat')==='code',b=el('div','dr-item'+(s.id===curId?' act':''));b.insertAdjacentHTML('afterbegin',ic(cm?'code':'msg'));b.append(el('span','t',s.title));b.append(el('span','pill'+(cm?' on':''),cm?'CODE':'ЧАТ'));const x=el('button','x');x.type='button';x.insertAdjacentHTML('afterbegin',ic('trash'));x.onclick=e=>{e.stopPropagation();delChat(s.id)};b.append(x);b.onclick=()=>openChat(s.id);sc.append(b)}
   sc.append(el('div','dr-h','ИНСТРУМЕНТЫ'));
-  const codePill=el('span','pill'+(settings.codeMode?' on':''),settings.codeMode?'вкл':'выкл');
+  const codePill=el('span','pill'+(isCode?' on':''),isCode?'вкл':'выкл');
   sc.append(item('cap','Учёба',()=>{$('studyBtn').click()}),
-    item('code','Режим «Код»',()=>setCode(!settings.codeMode),codePill),
+    item('code',isCode?'Вернуться в обычный чат':'VKTR Code',()=>setCode(!isCode),codePill),
     item('zip','Скачать проект в ZIP'+(Object.keys(PF).length?' ('+Object.keys(PF).length+')':''),()=>zipProject()),
     item('volume','Голос и озвучка',()=>$('openVoice').click()),
     item('chip','Нейросети и API-ключи',()=>$('provBtn').click()),
     item('pulse','Проверка системы',()=>$('openCheck').click()),
     item('gear','Настройки',()=>$('settingsBtn').click()));
   const ft=el('div','dr-foot'),th=el('div','themes');th.append(el('span',null,'Тема'));
-  for(const t of['black','gray','light']){const s=el('button','sw'+((settings.theme||'black')===t?' on':''));s.type='button';s.dataset.t=t;s.setAttribute('aria-label',t);s.onclick=()=>{setTheme(t);refreshDrawer()};th.append(s)}
-  ft.append(th);dr.append(top,nw,q,sc,ft)}
-function saveCurrentSilently(){/* актуализируем запись текущего чата в списке без перезаписи id */
-  const has=history.some(x=>x.who==='user')||chat.length;SS=SS.filter(s=>s.id!==curId);if(has)SS.unshift({id:curId,title:titleOf(),ts:Date.now(),history:history.slice(-60),chat:chat.slice(-12),files:PF,fname:PFname})}
-function setTheme(t){settings.theme=t;write('jarvis_settings',settings);document.body.dataset.theme=t;const m=document.querySelector('meta[name=theme-color]');if(m)m.content={black:'#0d0d0e',gray:'#2a2a2d',light:'#f4f4f5'}[t]||'#0d0d0e'}
+  for(const t of['warm','black','gray','paper']){const s=el('button','sw'+((settings.theme||'warm')===t?' on':''));s.type='button';s.dataset.t=t;s.setAttribute('aria-label',t);s.onclick=()=>{setTheme(t);refreshDrawer()};th.append(s)}
+  ft.append(th);dr.append(top,nw,seg,q,sc,ft)}
+function setTheme(t){settings.theme=t;write('jarvis_settings',settings);document.body.dataset.theme=t;const m=document.querySelector('meta[name=theme-color]');if(m)m.content={warm:'#262624',black:'#0d0d0e',gray:'#2a2a2d',light:'#f4f4f5',paper:'#faf9f5'}[t]||'#0d0d0e'}
 
 /* жест: свайп от левого края открывает шторку */
 {let x0=null,y0=0,edge=false;
@@ -322,13 +379,13 @@ addEventListener('visibilitychange',()=>{if(document.hidden)saveCurrent()});addE
 {
   const mb=el('button','icon-btn');mb.id='menuBtn';mb.type='button';mb.setAttribute('aria-label','Меню');mb.insertAdjacentHTML('afterbegin',ic('menu'));mb.onclick=openDrawer;
   const brand=document.querySelector('.brand');brand.prepend(mb);const bm=brand.querySelector('.brand-mark');if(bm)bm.style.display='none';
-  const bd=el('span','codebadge','КОД');document.querySelector('.status').insertBefore(bd,$('statusText').nextSibling);
-  const cc=el('button','chip'+(settings.codeMode?' on':''));cc.id='codeChip';cc.type='button';cc.insertAdjacentHTML('afterbegin',ic('code'));cc.append(el('span',null,'Код'));cc.onclick=()=>setCode(!settings.codeMode);$('studyBtn').after(cc);
+  const bd=el('span','codebadge','VKTR CODE');document.querySelector('.status').insertBefore(bd,$('statusText').nextSibling);
+  const cc=el('button','chip'+(settings.codeMode?' on':''));cc.id='codeChip';cc.type='button';cc.insertAdjacentHTML('afterbegin',ic('code'));cc.append(el('span',null,'VKTR Code'));cc.onclick=()=>setCode(!settings.codeMode);$('studyBtn').after(cc);
   const zc=el('button','chip');zc.type='button';zc.insertAdjacentHTML('afterbegin',ic('zip'));zc.append(el('span',null,'ZIP'));zc.onclick=()=>zipProject();cc.after(zc);
   const db=el('button','tbtn');db.id='dictBtn';db.type='button';db.setAttribute('aria-label','Диктовка');db.insertAdjacentHTML('afterbegin',ic('dict'));db.onclick=dictToggle;$('micBtn').before(db);
   $('vRate').min='0.5';$('vRate').max='2';$('vPitch').min='0.3';$('vPitch').max='2';
-  setTheme(settings.theme||'black');document.body.classList.toggle('codemode',!!settings.codeMode);
-  if(!read('vk_cur','')){write('vk_cur',curId)}
+  if(!settings.ui4){settings.ui4=1;settings.theme='warm';write('jarvis_settings',settings)}setTheme(settings.theme||'warm');applyMode();codeWelcome();
+  write('vk_cur_'+mode(),curId);
   // облачный провайдер без личных ключей
   if(CLOUD_URL&&!P.list.some(p=>p.id==='cloud')){P.list.unshift({id:'cloud',name:'Vektor Cloud',base:CLOUD_URL,model:'openai/gpt-oss-120b',key:'vektor',vision:false});if(!P.list.slice(1).some(p=>p.id===P.active&&p.key))P.active='cloud';saveP()}
 }
