@@ -1,0 +1,16 @@
+=== build.gradle.kts (корневой) — добавить в plugins ===
+    id("com.chaquo.python") version "15.0.1" apply false
+
+=== app/build.gradle.kts ===
+plugins { ...; id("com.chaquo.python") }
+android {
+    defaultConfig {
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
+        externalNativeBuild { cmake { cppFlags += "-std=c++17" } }
+    }
+    externalNativeBuild { cmake { path = file("src/main/cpp/CMakeLists.txt") } }
+}
+chaquopy { defaultConfig { version = "3.11"; pyc { src = false } } }
+// Python-код движка: положить папку engine/vektor в app/src/main/python/vektor
+// C++ ядро: положить core/vcore.cpp и core/CMakeLists.txt в app/src/main/cpp/
+// settings.gradle.kts → pluginManagement.repositories: добавить maven("https://chaquo.com/maven")

@@ -1,0 +1,12 @@
+name = "vektor-cloud"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+
+# Лимит запросов на человека (KV уже создан в вашем аккаунте Cloudflare)
+[[kv_namespaces]]
+binding = "RL"
+id = "a16e762c5693453e8ef35cb3ed9f7019"
+
+# Распознавание речи (Whisper) и запасная модель — бесплатно в пределах суточной квоты
+[ai]
+binding = "AI"
